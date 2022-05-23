@@ -1,6 +1,8 @@
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Security.AccessControl;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
@@ -44,6 +46,12 @@ public class Config
             Set(key, defaultValue);
             return defaultValue;
         }
+    }
+    public void Remove(string key) => properties.Remove(key);
+    public object this[string key]
+    {
+        get => Get(key);
+        set => Set(key, value);
     }
 
     public async Task SaveAsync() => await File.WriteAllTextAsync(Path, JsonConvert.SerializeObject(properties));
