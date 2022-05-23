@@ -14,10 +14,8 @@ public class Config
 
     public Config()
     {
-        if (File.Exists(Path) && JsonConvert.DeserializeObject(File.ReadAllText(Path)) is Dictionary<string, object> dict)
-        {
-            properties = dict;
-        }
+        if (File.Exists(Path))
+            properties = JsonConvert.DeserializeObject<Dictionary<string, object>>(File.ReadAllText(Path));
         else
             properties = new Dictionary<string, object>();
     }
@@ -26,6 +24,7 @@ public class Config
     public object Get(string key) => properties[key];
     public T Get<T>(string key) => (T)properties[key];
     public void Set(string key, object value) => properties[key] = value;
+    public void Set<T>(string key, T value) => properties[key] = value;
     public object GetOrSet(string key, object defaultValue)
     {
         if (Exists(key))
@@ -47,6 +46,6 @@ public class Config
         }
     }
 
-    public async Task SaveAsync() => await File.WriteAllTextAsync(JsonConvert.SerializeObject(properties), Path);
+    public async Task SaveAsync() => await File.WriteAllTextAsync(Path, JsonConvert.SerializeObject(properties));
 
 }
