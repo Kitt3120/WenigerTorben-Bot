@@ -9,7 +9,7 @@
             "type": "coreclr",
             "request": "launch",
             "preLaunchTask": "build",
-            "program": "${workspaceFolder}/WenigerTorben-Bot/bin/Debug/net7.0/WenigerTorbenBot.dll",
+            "program": "${workspaceFolder}/WenigerTorben-Bot/bin/Debug/net6.0/WenigerTorbenBot.dll",
             "args": [],
             "cwd": "${workspaceFolder}/WenigerTorben-Bot",
             "console": "integratedTerminal",
