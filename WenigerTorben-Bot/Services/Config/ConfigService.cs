@@ -75,7 +75,7 @@ public class ConfigService : Service, IConfigService
 
     public async Task SaveAsync() => await File.WriteAllTextAsync(FileUtils.ConfigPath, JsonConvert.SerializeObject(properties));
 
-    protected override ServiceConfiguration GetServiceConfiguration()
+    protected override ServiceConfiguration CreateServiceConfiguration()
     {
         return new ServiceConfigurationBuilder().SetUsesAsyncInitialization(true).Build();
     }

@@ -18,7 +18,7 @@ public abstract class Service
         Status = ServiceStatus.Starting;
         InitializationException = null;
 
-        serviceConfiguration = GetServiceConfiguration();
+        serviceConfiguration = CreateServiceConfiguration();
 
         try
         {
@@ -42,5 +42,5 @@ public abstract class Service
     protected virtual void Initialize() { throw new NotImplementedException($"Initialize() has not been implemented for {Name}"); }
     protected virtual async Task InitializeAsync() { throw new NotImplementedException($"InitializeAsync() has not been implemented for {Name}"); }
 
-    protected abstract ServiceConfiguration GetServiceConfiguration();
+    protected abstract ServiceConfiguration CreateServiceConfiguration();
 }
