@@ -1,7 +1,5 @@
 using System;
-using System.ComponentModel;
 using System.IO;
-using System.Runtime.InteropServices;
 
 namespace WenigerTorbenBot.Utils;
 public class FileUtils

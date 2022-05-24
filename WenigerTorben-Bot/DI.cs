@@ -1,6 +1,6 @@
 using System;
 using Microsoft.Extensions.DependencyInjection;
-using WenigerTorbenBot.Storage.Config;
+using WenigerTorbenBot.Services.Config;
 
 namespace WenigerTorbenBot;
 
@@ -11,7 +11,7 @@ public class DI
     public static void Init()
     {
         ServiceProvider = new ServiceCollection()
-        .AddSingleton<IConfig, Config>()
+        .AddSingleton<IConfigService, ConfigService>()
         .BuildServiceProvider();
     }
 }

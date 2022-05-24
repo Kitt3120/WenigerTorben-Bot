@@ -1,20 +1,19 @@
 using System.Collections.Generic;
-using System.Globalization;
 using System.IO;
-using System.Linq;
-using System.Runtime.CompilerServices;
-using System.Security.AccessControl;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
 using WenigerTorbenBot.Utils;
 
-namespace WenigerTorbenBot.Storage.Config;
-public class Config : IConfig
+namespace WenigerTorbenBot.Services.Config;
+
+public class ConfigService : Service, IConfigService
 {
     private Dictionary<string, object> properties;
 
-    public Config()
+    public ConfigService() : base("Config")
     { }
+
+    protected override async Task InitializeAsync() => await LoadAsync();
 
     public bool Exists(string key) => properties.ContainsKey(key);
 
@@ -76,4 +75,8 @@ public class Config : IConfig
 
     public async Task SaveAsync() => await File.WriteAllTextAsync(FileUtils.ConfigPath, JsonConvert.SerializeObject(properties));
 
+    protected override ServiceConfiguration GetServiceConfiguration()
+    {
+        return new ServiceConfigurationBuilder().SetUsesAsyncInitialization(true).Build();
+    }
 }

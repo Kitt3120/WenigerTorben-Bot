@@ -1,4 +1,5 @@
 using System;
+using System.Threading.Tasks;
 
 namespace WenigerTorbenBot.Services;
 
@@ -6,13 +7,22 @@ public abstract class Service
 {
     public string Name { get; private set; }
     public ServiceStatus Status { get; private set; }
+
+    private ServiceConfiguration serviceConfiguration;
+
     public Service(string name)
     {
         Name = name;
         Status = ServiceStatus.Starting;
+
+        serviceConfiguration = GetServiceConfiguration();
+
         try
         {
-            Initialize();
+            if (serviceConfiguration.UsesAsyncInitialization)
+                InitializeAsync().GetAwaiter().GetResult();
+            else
+                Initialize();
             Status = ServiceStatus.Available;
         }
         catch (Exception e)
@@ -25,5 +35,8 @@ public abstract class Service
 
     public bool IsAvailable() => Status == ServiceStatus.Available;
 
-    protected abstract void Initialize();
+    protected virtual void Initialize() { throw new NotImplementedException($"Initialize() has not been implemented for {Name}"); }
+    protected virtual async Task InitializeAsync() { throw new NotImplementedException($"InitializeAsync() has not been implemented for {Name}"); }
+
+    protected abstract ServiceConfiguration GetServiceConfiguration();
 }
