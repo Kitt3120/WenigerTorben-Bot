@@ -1,6 +1,7 @@
 using System;
 using Microsoft.Extensions.DependencyInjection;
 using WenigerTorbenBot.Services.Config;
+using WenigerTorbenBot.Services.Health;
 
 namespace WenigerTorbenBot;
 
@@ -10,8 +11,12 @@ public class DI
 
     public static void Init()
     {
+        IHealthService healthService = new HealthService();
+        IConfigService configService = new ConfigService();
+
         ServiceProvider = new ServiceCollection()
-        .AddSingleton<IConfigService, ConfigService>()
+        .AddSingleton(healthService)
+        .AddSingleton(configService)
         .BuildServiceProvider();
     }
 }
