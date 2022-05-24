@@ -2,7 +2,7 @@ namespace WenigerTorbenBot.Services;
 
 public class ServiceConfigurationBuilder
 {
-    private ServiceConfiguration serviceConfiguration;
+    private readonly ServiceConfiguration serviceConfiguration;
 
     public ServiceConfigurationBuilder()
     {

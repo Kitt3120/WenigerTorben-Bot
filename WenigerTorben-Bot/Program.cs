@@ -9,7 +9,7 @@ the Free Software Foundation, either version 3 of the License, or
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.See the
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 GNU General Public License for more details.
 
 You should have received a copy of the GNU General Public License
@@ -17,21 +17,24 @@ along with this program.If not, see < https://www.gnu.org/licenses/>.
 */
 
 using System;
+using System.ComponentModel.Design;
 using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
+using WenigerTorbenBot.Services;
 using WenigerTorbenBot.Services.Config;
+using WenigerTorbenBot.Services.Health;
 using WenigerTorbenBot.Utils;
 
 namespace WenigerTorbenBot;
 public class Program
 {
 
-    public static void Main(string[] args)
+    public static void Main()
     {
-        MainAsync(args).GetAwaiter().GetResult();
+        MainAsync().GetAwaiter().GetResult();
     }
 
-    public static async Task MainAsync(string[] args)
+    public static async Task MainAsync()
     {
         PrintLicense();
         Console.WriteLine("\n");
@@ -39,9 +42,9 @@ public class Program
         DI.Init();
         FileUtils.GenerateDirectories();
 
-        IConfigService config = DI.ServiceProvider.GetService<IConfigService>();
-
-        await config.SaveAsync();
+        IConfigService? configService = DI.ServiceProvider.GetService<IConfigService>();
+        if (configService is not null)
+            await configService.SaveAsync();
     }
 
     public static void PrintLicense()
@@ -56,7 +59,7 @@ public class Program
         $"{Environment.NewLine}" +
         $"This program is distributed in the hope that it will be useful,{Environment.NewLine}" +
         $"but WITHOUT ANY WARRANTY; without even the implied warranty of{Environment.NewLine}" +
-        $"MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.See the{Environment.NewLine}" +
+        $"MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the{Environment.NewLine}" +
         $"GNU General Public License for more details.{Environment.NewLine}" +
         $"{Environment.NewLine}" +
         $"You should have received a copy of the GNU General Public License{Environment.NewLine}" +

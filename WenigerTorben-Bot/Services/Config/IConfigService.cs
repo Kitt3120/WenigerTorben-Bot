@@ -18,8 +18,6 @@ public interface IConfigService
 
     public void Set(string key, object value);
 
-    public void Set<T>(string key, T value);
-
     public object GetOrSet(string key, object defaultValue);
 
     public T GetOrSet<T>(string key, T defaultValue);

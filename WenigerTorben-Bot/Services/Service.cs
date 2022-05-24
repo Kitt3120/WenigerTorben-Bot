@@ -5,21 +5,19 @@ namespace WenigerTorbenBot.Services;
 
 public abstract class Service
 {
-    public string Name { get; private set; }
+    public abstract string Name { get; }
+    public abstract ServicePriority Priority { get; }
     public ServiceStatus Status { get; private set; }
-
     internal Exception? InitializationException { get; private set; }
 
     private readonly ServiceConfiguration serviceConfiguration;
 
-    public Service(string name)
+    public Service()
     {
-        Name = name;
         Status = ServiceStatus.Starting;
-        InitializationException = null;
-
         serviceConfiguration = CreateServiceConfiguration();
 
+        InitializationException = null;
         try
         {
             if (serviceConfiguration.UsesAsyncInitialization)
@@ -35,6 +33,8 @@ public abstract class Service
             //TODO: Proper logging
             Console.WriteLine($"Failed to initialize service {Name}: {e.Message}");
         }
+
+        ServiceRegistry.Register(this);
     }
 
     public bool IsAvailable() => Status == ServiceStatus.Available;

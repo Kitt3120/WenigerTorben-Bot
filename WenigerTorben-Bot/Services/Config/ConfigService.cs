@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Threading.Tasks;
@@ -8,10 +9,9 @@ namespace WenigerTorbenBot.Services.Config;
 
 public class ConfigService : Service, IConfigService
 {
-    private Dictionary<string, object> properties;
-
-    public ConfigService() : base("Config")
-    { }
+    public override string Name => "Config";
+    public override ServicePriority Priority => ServicePriority.Essential;
+    private Dictionary<string, object> properties = new Dictionary<string, object>();
 
     protected override async Task InitializeAsync() => await LoadAsync();
 
@@ -28,8 +28,6 @@ public class ConfigService : Service, IConfigService
     }
 
     public void Set(string key, object value) => properties[key] = value;
-
-    public void Set<T>(string key, T value) => properties[key] = value;
 
     public object GetOrSet(string key, object defaultValue)
     {
@@ -55,20 +53,17 @@ public class ConfigService : Service, IConfigService
 
     public void Remove(string key) => properties.Remove(key);
 
+    //TODO: Null-Check
     public void Load()
     {
         if (File.Exists(FileUtils.ConfigPath))
             properties = JsonConvert.DeserializeObject<Dictionary<string, object>>(File.ReadAllText(FileUtils.ConfigPath));
-        else
-            properties = new Dictionary<string, object>();
     }
 
     public async Task LoadAsync()
     {
         if (File.Exists(FileUtils.ConfigPath))
             properties = JsonConvert.DeserializeObject<Dictionary<string, object>>(await File.ReadAllTextAsync(FileUtils.ConfigPath));
-        else
-            properties = new Dictionary<string, object>();
     }
 
     public void Save() => File.WriteAllText(FileUtils.ConfigPath, JsonConvert.SerializeObject(properties));
