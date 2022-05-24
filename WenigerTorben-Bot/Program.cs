@@ -19,8 +19,7 @@ along with this program.If not, see < https://www.gnu.org/licenses/>.
 using System;
 using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
-using Newtonsoft.Json;
-using WenigerTorbenBot.Storage.Config;
+using WenigerTorbenBot.Services.Config;
 using WenigerTorbenBot.Utils;
 
 namespace WenigerTorbenBot;
@@ -29,28 +28,19 @@ public class Program
 
     public static void Main(string[] args)
     {
-        new Program().Init(args).GetAwaiter().GetResult();
+        MainAsync(args).GetAwaiter().GetResult();
     }
 
-    public async Task Init(string[] args)
+    public static async Task MainAsync(string[] args)
     {
         PrintLicense();
         Console.WriteLine("\n");
 
         DI.Init();
-
-        IConfig config = DI.ServiceProvider.GetService<IConfig>();
-
         FileUtils.GenerateDirectories();
-        try
-        {
-            await config.LoadAsync();
-        }
-        catch (JsonSerializationException e)
-        {
-            Console.WriteLine($"There was an error while reading the config file: {e.Message}.{Environment.NewLine}Fix any errors in the config file or delete it to generate a new one.");
-            Environment.Exit(1);
-        }
+
+        IConfigService config = DI.ServiceProvider.GetService<IConfigService>();
+
         await config.SaveAsync();
     }
 

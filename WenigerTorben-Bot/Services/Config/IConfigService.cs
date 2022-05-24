@@ -1,8 +1,8 @@
 using System.Threading.Tasks;
 
-namespace WenigerTorbenBot.Storage.Config;
+namespace WenigerTorbenBot.Services.Config;
 
-public interface IConfig
+public interface IConfigService
 {
     public bool Exists(string key);
 
