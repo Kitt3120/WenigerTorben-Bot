@@ -8,19 +8,14 @@ using System.Threading.Tasks;
 using Newtonsoft.Json;
 using WenigerTorbenBot.Utils;
 
-namespace WenigerTorbenBot.Storage;
-public class Config
+namespace WenigerTorbenBot.Storage.Config;
+public class Config : IConfig
 {
     public string Path { get; } = FileUtils.GetPath("WenigerTorbenBot.conf");
-    private readonly Dictionary<string, object> properties;
+    private Dictionary<string, object> properties;
 
-    public Config()
-    {
-        if (File.Exists(Path))
-            properties = JsonConvert.DeserializeObject<Dictionary<string, object>>(File.ReadAllText(Path));
-        else
-            properties = new Dictionary<string, object>();
-    }
+    public Config(bool autoLoad = false)
+    { }
 
     public bool Exists(string key) => properties.ContainsKey(key);
     public object Get(string key) => properties[key];
@@ -53,6 +48,24 @@ public class Config
         get => Get(key);
         set => Set(key, value);
     }
+
+    public void Load()
+    {
+        if (File.Exists(Path))
+            properties = JsonConvert.DeserializeObject<Dictionary<string, object>>(File.ReadAllText(Path));
+        else
+            properties = new Dictionary<string, object>();
+    }
+
+    public async Task LoadAsync()
+    {
+        if (File.Exists(Path))
+            properties = JsonConvert.DeserializeObject<Dictionary<string, object>>(await File.ReadAllTextAsync(Path));
+        else
+            properties = new Dictionary<string, object>();
+    }
+
+    public void Save() => File.WriteAllText(Path, JsonConvert.SerializeObject(properties));
 
     public async Task SaveAsync() => await File.WriteAllTextAsync(Path, JsonConvert.SerializeObject(properties));
 

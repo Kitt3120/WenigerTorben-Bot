@@ -19,14 +19,17 @@ along with this program.If not, see < https://www.gnu.org/licenses/>.
 using System;
 using System.IO;
 using System.Threading.Tasks;
+using Internal;
 using Newtonsoft.Json;
 using WenigerTorbenBot.Storage;
+using WenigerTorbenBot.Storage.Config;
 using WenigerTorbenBot.Utils;
 
 namespace WenigerTorbenBot;
 public class Program
 {
-    public static Config config { get; private set; }
+    public static IConfig config { get; private set; }
+
     public static void Main(string[] args)
     {
         new Program().Init(args).GetAwaiter().GetResult();
@@ -35,11 +38,13 @@ public class Program
     public async Task Init(string[] args)
     {
         PrintLicense();
+        Console.WriteLine("\n");
 
+        config = new Config();
         FileUtils.GenerateDirectories();
         try
         {
-            config = new Config();
+            await config.LoadAsync();
         }
         catch (JsonSerializationException e)
         {
