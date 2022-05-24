@@ -8,12 +8,15 @@ public abstract class Service
     public string Name { get; private set; }
     public ServiceStatus Status { get; private set; }
 
-    private ServiceConfiguration serviceConfiguration;
+    internal Exception? InitializationException { get; private set; }
+
+    private readonly ServiceConfiguration serviceConfiguration;
 
     public Service(string name)
     {
         Name = name;
         Status = ServiceStatus.Starting;
+        InitializationException = null;
 
         serviceConfiguration = GetServiceConfiguration();
 
@@ -28,6 +31,7 @@ public abstract class Service
         catch (Exception e)
         {
             Status = ServiceStatus.Unavailable;
+            InitializationException = e;
             //TODO: Proper logging
             Console.WriteLine($"Failed to initialize service {Name}: {e.Message}");
         }
