@@ -17,18 +17,15 @@ along with this program.If not, see < https://www.gnu.org/licenses/>.
 */
 
 using System;
-using System.IO;
 using System.Threading.Tasks;
-using Internal;
+using Microsoft.Extensions.DependencyInjection;
 using Newtonsoft.Json;
-using WenigerTorbenBot.Storage;
 using WenigerTorbenBot.Storage.Config;
 using WenigerTorbenBot.Utils;
 
 namespace WenigerTorbenBot;
 public class Program
 {
-    public static IConfig config { get; private set; }
 
     public static void Main(string[] args)
     {
@@ -40,7 +37,10 @@ public class Program
         PrintLicense();
         Console.WriteLine("\n");
 
-        config = new Config();
+        DI.Init();
+
+        IConfig config = DI.ServiceProvider.GetService<IConfig>();
+
         FileUtils.GenerateDirectories();
         try
         {
