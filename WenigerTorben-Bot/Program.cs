@@ -17,12 +17,9 @@ along with this program.If not, see < https://www.gnu.org/licenses/>.
 */
 
 using System;
-using System.ComponentModel.Design;
 using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
-using WenigerTorbenBot.Services;
 using WenigerTorbenBot.Services.Config;
-using WenigerTorbenBot.Services.Health;
 using WenigerTorbenBot.Utils;
 
 namespace WenigerTorbenBot;
