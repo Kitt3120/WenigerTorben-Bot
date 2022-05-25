@@ -7,37 +7,50 @@ public abstract class Service
 {
     public abstract string Name { get; }
     public abstract ServicePriority Priority { get; }
-    public ServiceStatus Status { get; private set; }
-    internal Exception? InitializationException { get; private set; }
+    public ServiceStatus Status { get; protected set; }
+    public Exception? InitializationException { get; protected set; }
 
     private readonly ServiceConfiguration serviceConfiguration;
 
     public Service()
     {
-        Status = ServiceStatus.Starting;
+        Status = ServiceStatus.Stopped;
         serviceConfiguration = CreateServiceConfiguration();
-
         InitializationException = null;
+        ServiceRegistry.Register(this);
+    }
+
+    public void Start()
+    {
+        if(Status != ServiceStatus.Stopped)
+            return;
+
         try
         {
             if (serviceConfiguration.UsesAsyncInitialization)
                 InitializeAsync().GetAwaiter().GetResult();
             else
                 Initialize();
-            Status = ServiceStatus.Available;
+            Status = ServiceStatus.Started;
         }
         catch (Exception e)
         {
-            Status = ServiceStatus.Unavailable;
+            Status = ServiceStatus.Failed;
             InitializationException = e;
             //TODO: Proper logging
             Console.WriteLine($"Failed to initialize service {Name}: {e.Message}");
         }
-
-        ServiceRegistry.Register(this);
     }
 
-    public bool IsAvailable() => Status == ServiceStatus.Available;
+    public void Stop()
+    {
+        if(this is IDisposable disposable)
+            disposable.Dispose();
+
+        Status = ServiceStatus.Stopped;
+    }
+
+    public bool IsAvailable() => Status == ServiceStatus.Started;
 
     protected virtual void Initialize() { throw new NotImplementedException($"Initialize() has not been implemented for {Name}"); }
     protected virtual async Task InitializeAsync() { throw new NotImplementedException($"InitializeAsync() has not been implemented for {Name}"); }

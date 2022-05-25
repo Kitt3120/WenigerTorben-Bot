@@ -1,4 +1,3 @@
-using System;
 using System.Linq;
 
 namespace WenigerTorbenBot.Services.Health;
@@ -21,10 +20,7 @@ public class HealthService : Service, IHealthService
 
     public bool IsOverallHealthGood() => ServiceRegistry.GetServices()
                                             .Where(service => service.Priority == ServicePriority.Essential)
-                                            .All(service => service.Status == ServiceStatus.Available);
+                                            .All(service => service.Status == ServiceStatus.Started);
 
-    protected override ServiceConfiguration CreateServiceConfiguration()
-    {
-        return new ServiceConfigurationBuilder().Build();
-    }
+    protected override ServiceConfiguration CreateServiceConfiguration() => new ServiceConfigurationBuilder().Build();
 }

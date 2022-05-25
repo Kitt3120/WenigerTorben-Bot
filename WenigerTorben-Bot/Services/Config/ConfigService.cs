@@ -1,9 +1,7 @@
-using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
-using WenigerTorbenBot.Utils;
+using WenigerTorbenBot.Services.File;
 
 namespace WenigerTorbenBot.Services.Config;
 
@@ -11,7 +9,15 @@ public class ConfigService : Service, IConfigService
 {
     public override string Name => "Config";
     public override ServicePriority Priority => ServicePriority.Essential;
+
+    private readonly IFileService fileService;
     private Dictionary<string, object> properties = new Dictionary<string, object>();
+
+
+    public ConfigService(IFileService fileService) : base()
+    {
+        this.fileService = fileService;
+    }
 
     protected override async Task InitializeAsync() => await LoadAsync();
 
@@ -56,22 +62,34 @@ public class ConfigService : Service, IConfigService
     //TODO: Null-Check
     public void Load()
     {
-        if (File.Exists(FileUtils.ConfigPath))
-            properties = JsonConvert.DeserializeObject<Dictionary<string, object>>(File.ReadAllText(FileUtils.ConfigPath));
+        if (System.IO.File.Exists(fileService.ConfigPath))
+        {
+            Dictionary<string, object>? deserialized = JsonConvert.DeserializeObject<Dictionary<string, object>>(System.IO.File.ReadAllText(fileService.ConfigPath));
+            if (deserialized is not null)
+                properties = deserialized;
+        }
     }
 
     public async Task LoadAsync()
     {
-        if (File.Exists(FileUtils.ConfigPath))
-            properties = JsonConvert.DeserializeObject<Dictionary<string, object>>(await File.ReadAllTextAsync(FileUtils.ConfigPath));
+        
+        if (System.IO.File.Exists(fileService.ConfigPath))
+        {
+            Dictionary<string, object>? deserialized = JsonConvert.DeserializeObject<Dictionary<string, object>>(await System.IO.File.ReadAllTextAsync(fileService.ConfigPath));
+            if (deserialized is not null)
+                properties = deserialized;
+        }
     }
 
-    public void Save() => File.WriteAllText(FileUtils.ConfigPath, JsonConvert.SerializeObject(properties));
-
-    public async Task SaveAsync() => await File.WriteAllTextAsync(FileUtils.ConfigPath, JsonConvert.SerializeObject(properties));
-
-    protected override ServiceConfiguration CreateServiceConfiguration()
+    public void Save()
     {
-        return new ServiceConfigurationBuilder().SetUsesAsyncInitialization(true).Build();
+        if(Status == ServiceStatus.Started)
+            System.IO.File.WriteAllText(fileService.ConfigPath, JsonConvert.SerializeObject(properties));
     }
+    public async Task SaveAsync()
+    {
+        if (Status == ServiceStatus.Started)
+            await System.IO.File.WriteAllTextAsync(fileService.ConfigPath, JsonConvert.SerializeObject(properties));
+    }
+    protected override ServiceConfiguration CreateServiceConfiguration() => new ServiceConfigurationBuilder().SetUsesAsyncInitialization(true).Build();
 }
