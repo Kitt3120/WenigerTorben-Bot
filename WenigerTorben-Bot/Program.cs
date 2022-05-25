@@ -19,6 +19,7 @@ along with this program.If not, see < https://www.gnu.org/licenses/>.
 using System;
 using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
+using WenigerTorbenBot.Services;
 using WenigerTorbenBot.Services.Config;
 using WenigerTorbenBot.Utils;
 
@@ -37,9 +38,10 @@ public class Program
         Console.WriteLine("\n");
 
         DI.Init();
-        FileUtils.GenerateDirectories();
+        foreach(Service service in ServiceRegistry.GetServices())
+            service.Start();
 
-        IConfigService? configService = DI.ServiceProvider.GetService<IConfigService>();
+        IConfigService? configService = ServiceRegistry.Get<IConfigService>();
         if (configService is not null)
             await configService.SaveAsync();
     }
