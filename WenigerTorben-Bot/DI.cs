@@ -11,12 +11,9 @@ public class DI
 
     public static void Init()
     {
-        IHealthService healthService = new HealthService();
-        IConfigService configService = new ConfigService();
-
         ServiceProvider = new ServiceCollection()
-        .AddSingleton(healthService)
-        .AddSingleton(configService)
+        .AddSingleton<IHealthService>(new HealthService())
+        .AddSingleton<IConfigService>(new ConfigService())
         .BuildServiceProvider();
     }
 }
