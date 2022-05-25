@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
@@ -5,7 +6,7 @@ using WenigerTorbenBot.Services.File;
 
 namespace WenigerTorbenBot.Services.Config;
 
-public class ConfigService : Service, IConfigService
+public class ConfigService : Service, IConfigService, IAsyncDisposable
 {
     public override string Name => "Config";
     public override ServicePriority Priority => ServicePriority.Essential;
@@ -92,4 +93,6 @@ public class ConfigService : Service, IConfigService
             await System.IO.File.WriteAllTextAsync(fileService.ConfigPath, JsonConvert.SerializeObject(properties));
     }
     protected override ServiceConfiguration CreateServiceConfiguration() => new ServiceConfigurationBuilder().SetUsesAsyncInitialization(true).Build();
+
+    public async ValueTask DisposeAsync() => await SaveAsync();
 }
