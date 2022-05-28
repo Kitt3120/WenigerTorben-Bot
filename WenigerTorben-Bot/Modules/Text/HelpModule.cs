@@ -6,6 +6,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Discord;
 using Discord.Commands;
+using WenigerTorbenBot.Modules.Attributes;
 using WenigerTorbenBot.Services.Discord;
 
 namespace WenigerTorbenBot.Modules.Text;
@@ -30,6 +31,9 @@ public class HelpModule : ModuleBase<SocketCommandContext>
             List<EmbedBuilder> embedBuilders = new List<EmbedBuilder>();
             foreach(ModuleInfo moduleInfo in discordService.GetCommandService().Modules.OrderBy(module => module.Name))
             {
+                if(moduleInfo.Attributes.Any(attribute => attribute is Hidden))
+                    continue;
+
                 EmbedBuilder embedBuilder = new EmbedBuilder();
                 embedBuilder
                 .WithTitle(moduleInfo.Name)
@@ -40,6 +44,9 @@ public class HelpModule : ModuleBase<SocketCommandContext>
                 List<EmbedFieldBuilder> fieldBuilders = new List<EmbedFieldBuilder>();
                 foreach(CommandInfo commandInfo in moduleInfo.Commands.OrderBy(command => command.Name))
                 {
+                    if(commandInfo.Attributes.Any(attribute => attribute is Hidden))
+                        continue;
+                    
                     if(commandInfo.Parameters.Any(parameter => parameter.IsOptional))
                         optionalParameters = true;
 
@@ -72,7 +79,7 @@ public class HelpModule : ModuleBase<SocketCommandContext>
             CommandInfo? cmd = null;
             foreach(ModuleInfo moduleInfo in discordService.GetCommandService().Modules)
                 foreach(CommandInfo commandInfo in moduleInfo.Commands)
-                    if(commandInfo.Aliases.Select(alias => alias.ToLower()).Contains(command.ToLower()))
+                    if(!commandInfo.Attributes.Any(attribute => attribute is Hidden) && commandInfo.Aliases.Select(alias => alias.ToLower()).Contains(command.ToLower()))
                     {
                         module = moduleInfo;
                         cmd = commandInfo;

@@ -6,6 +6,7 @@ namespace WenigerTorbenBot.Modules.Text;
 
 [Name("Test")]
 [Summary("A module that provides commands to test the functionality of the bot")]
+[Hidden()]
 public class TestModule : ModuleBase<SocketCommandContext>
 {
     [Command("test")]
