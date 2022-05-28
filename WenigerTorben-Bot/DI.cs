@@ -2,6 +2,7 @@ using System;
 using System.IO;
 using Microsoft.Extensions.DependencyInjection;
 using WenigerTorbenBot.Services.Config;
+using WenigerTorbenBot.Services.Discord;
 using WenigerTorbenBot.Services.File;
 using WenigerTorbenBot.Services.Health;
 
@@ -24,11 +25,13 @@ public class DI
         HealthService healthService = new HealthService();
         FileService fileService = new FileService();
         ConfigService configService = new ConfigService(fileService);
-        
+        DiscordService discordService = new DiscordService(configService);
+
         ServiceProvider = new ServiceCollection()
         .AddSingleton<IHealthService>(healthService)
         .AddSingleton<IFileService>(fileService)
         .AddSingleton<IConfigService>(configService)
+        .AddSingleton<IDiscordService>(discordService)
         .BuildServiceProvider();
 
         

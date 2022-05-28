@@ -42,9 +42,11 @@ public abstract class Service
         }
     }
 
-    public void Stop()
+    public async Task Stop()
     {
-        if(this is IDisposable disposable)
+        if (this is IAsyncDisposable asyncDisposable)
+            await asyncDisposable.DisposeAsync();
+        else if(this is IDisposable disposable)
             disposable.Dispose();
 
         Status = ServiceStatus.Stopped;

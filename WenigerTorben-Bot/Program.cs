@@ -17,10 +17,13 @@ along with this program.If not, see < https://www.gnu.org/licenses/>.
 */
 
 using System;
+using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
 using WenigerTorbenBot.Services;
 using WenigerTorbenBot.Services.Config;
+using WenigerTorbenBot.Services.Discord;
+using WenigerTorbenBot.Services.Health;
 using WenigerTorbenBot.Utils;
 
 namespace WenigerTorbenBot;
@@ -38,12 +41,21 @@ public class Program
         Console.WriteLine("\n");
 
         DI.Init();
+
         foreach(Service service in ServiceRegistry.GetServices())
             service.Start();
 
-        IConfigService? configService = ServiceRegistry.Get<IConfigService>();
-        if (configService is not null)
-            await configService.SaveAsync();
+        IHealthService? healthService = ServiceRegistry.Get<IHealthService>();
+        if(healthService is null || !healthService.IsOverallHealthGood())
+        {
+            Console.WriteLine("Some essential service(s) were not able to initialize successfully. Shutting down.");
+            Environment.Exit(1);
+        }
+
+        Console.ReadKey();
+        
+        foreach(Service service in ServiceRegistry.GetServices().Reverse())
+            await service.Stop();
     }
 
     public static void PrintLicense()
