@@ -13,18 +13,14 @@ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 GNU General Public License for more details.
 
 You should have received a copy of the GNU General Public License
-along with this program.If not, see < https://www.gnu.org/licenses/>.
+along with this program. If not, see < https://www.gnu.org/licenses/>.
 */
 
 using System;
 using System.Linq;
 using System.Threading.Tasks;
-using Microsoft.Extensions.DependencyInjection;
 using WenigerTorbenBot.Services;
-using WenigerTorbenBot.Services.Config;
-using WenigerTorbenBot.Services.Discord;
 using WenigerTorbenBot.Services.Health;
-using WenigerTorbenBot.Utils;
 
 namespace WenigerTorbenBot;
 public class Program
@@ -74,7 +70,7 @@ public class Program
         $"GNU General Public License for more details.{Environment.NewLine}" +
         $"{Environment.NewLine}" +
         $"You should have received a copy of the GNU General Public License{Environment.NewLine}" +
-        $"along with this program.If not, see < https://www.gnu.org/licenses/>.");
+        $"along with this program. If not, see < https://www.gnu.org/licenses/>.");
     }
 }
 
