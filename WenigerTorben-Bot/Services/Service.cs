@@ -22,7 +22,7 @@ public abstract class Service
 
     public void Start()
     {
-        if(Status != ServiceStatus.Stopped)
+        if (Status != ServiceStatus.Stopped)
             return;
 
         try
@@ -46,7 +46,7 @@ public abstract class Service
     {
         if (this is IAsyncDisposable asyncDisposable)
             await asyncDisposable.DisposeAsync();
-        else if(this is IDisposable disposable)
+        else if (this is IDisposable disposable)
             disposable.Dispose();
 
         Status = ServiceStatus.Stopped;

@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using System.Threading;
 using System.Threading.Tasks;
 using Discord;
 using Discord.Commands;
@@ -22,16 +21,16 @@ public class HelpModule : ModuleBase<SocketCommandContext>
     }
 
     [Command("help")]
-    [Alias(new string[]{"h", "?"})]
+    [Alias(new string[] { "h", "?" })]
     [Summary("Prints a list of available commands or shows in-depth help for a specific command")]
     public async Task HelpCommand([Summary("The command to get in-depth help for")] string? command = null)
     {
-        if(command is null)
+        if (command is null)
         {
             List<EmbedBuilder> embedBuilders = new List<EmbedBuilder>();
-            foreach(ModuleInfo moduleInfo in discordService.GetCommandService().Modules.OrderBy(module => module.Name))
+            foreach (ModuleInfo moduleInfo in discordService.GetCommandService().Modules.OrderBy(module => module.Name))
             {
-                if(moduleInfo.Attributes.Any(attribute => attribute is Hidden))
+                if (moduleInfo.Attributes.Any(attribute => attribute is Hidden))
                     continue;
 
                 EmbedBuilder embedBuilder = new EmbedBuilder();
@@ -42,19 +41,19 @@ public class HelpModule : ModuleBase<SocketCommandContext>
 
                 bool optionalParameters = false;
                 List<EmbedFieldBuilder> fieldBuilders = new List<EmbedFieldBuilder>();
-                foreach(CommandInfo commandInfo in moduleInfo.Commands.OrderBy(command => command.Name))
+                foreach (CommandInfo commandInfo in moduleInfo.Commands.OrderBy(command => command.Name))
                 {
-                    if(commandInfo.Attributes.Any(attribute => attribute is Hidden))
+                    if (commandInfo.Attributes.Any(attribute => attribute is Hidden))
                         continue;
-                    
-                    if(commandInfo.Parameters.Any(parameter => parameter.IsOptional))
+
+                    if (commandInfo.Parameters.Any(parameter => parameter.IsOptional))
                         optionalParameters = true;
 
                     StringBuilder nameBuilder = new StringBuilder();
                     nameBuilder.Append(commandInfo.Name);
-                    if(commandInfo.Parameters.Count > 0)
+                    if (commandInfo.Parameters.Count > 0)
                         nameBuilder.Append($" ({string.Join(", ", commandInfo.Parameters.Select(parameter => $"{parameter.Name}{(parameter.IsOptional ? "*" : string.Empty)}: {parameter.Type.Name}"))})");
-                    if(commandInfo.Aliases.Count > 1)
+                    if (commandInfo.Aliases.Count > 1)
                         nameBuilder.Append($" [{string.Join(", ", commandInfo.Aliases.Where(alias => alias != commandInfo.Name))}]");
 
                     EmbedFieldBuilder fieldBuilder = new EmbedFieldBuilder();
@@ -64,8 +63,8 @@ public class HelpModule : ModuleBase<SocketCommandContext>
                     fieldBuilders.Add(fieldBuilder);
                 }
                 embedBuilder.WithFields(fieldBuilders);
-                
-                if(optionalParameters)
+
+                if (optionalParameters)
                     embedBuilder.WithFooter("* means optional parameter");
 
                 embedBuilders.Add(embedBuilder);
@@ -77,16 +76,16 @@ public class HelpModule : ModuleBase<SocketCommandContext>
         {
             ModuleInfo? module = null;
             CommandInfo? cmd = null;
-            foreach(ModuleInfo moduleInfo in discordService.GetCommandService().Modules)
-                foreach(CommandInfo commandInfo in moduleInfo.Commands)
-                    if(!commandInfo.Attributes.Any(attribute => attribute is Hidden) && commandInfo.Aliases.Select(alias => alias.ToLower()).Contains(command.ToLower()))
+            foreach (ModuleInfo moduleInfo in discordService.GetCommandService().Modules)
+                foreach (CommandInfo commandInfo in moduleInfo.Commands)
+                    if (!commandInfo.Attributes.Any(attribute => attribute is Hidden) && commandInfo.Aliases.Select(alias => alias.ToLower()).Contains(command.ToLower()))
                     {
                         module = moduleInfo;
                         cmd = commandInfo;
                     }
-                        
-            
-            if(cmd is null)
+
+
+            if (cmd is null)
             {
                 IUserMessage userMessage = await ReplyAsync($"Command \"{command}\" not found");
                 await Context.Message.AddReactionAsync(Emoji.Parse(":question:"));
@@ -97,7 +96,7 @@ public class HelpModule : ModuleBase<SocketCommandContext>
             embedBuilder.WithTitle(cmd.Name);
             embedBuilder.WithDescription($"{cmd.Name} is a command from the {module.Name}-Module.{Environment.NewLine}{Environment.NewLine}Description: {cmd.Summary}{Environment.NewLine}Aliases: {(cmd.Aliases.Count > 1 ? string.Join(", ", cmd.Aliases.Where(alias => alias != cmd.Name)) : "None")}{Environment.NewLine}{Environment.NewLine}{(cmd.Parameters.Count > 0 ? "Parameters:" : "This command does not take any parameters")} ");
 
-            if(cmd.Parameters.Count > 0)
+            if (cmd.Parameters.Count > 0)
             {
                 List<EmbedFieldBuilder> embedFieldBuilders = new List<EmbedFieldBuilder>();
 
@@ -107,7 +106,7 @@ public class HelpModule : ModuleBase<SocketCommandContext>
 
                     EmbedFieldBuilder embedFieldBuilder = new EmbedFieldBuilder();
                     embedFieldBuilder
-                    .WithName($"{i+1}. {parameterInfo.Name}: {parameterInfo.Type.Name}{(parameterInfo.IsOptional ? " (Optional)" : string.Empty)}")
+                    .WithName($"{i + 1}. {parameterInfo.Name}: {parameterInfo.Type.Name}{(parameterInfo.IsOptional ? " (Optional)" : string.Empty)}")
                     .WithValue($"> {(string.IsNullOrWhiteSpace(parameterInfo.Summary) ? "No description" : parameterInfo.Summary)}");
                     embedFieldBuilders.Add(embedFieldBuilder);
                 }

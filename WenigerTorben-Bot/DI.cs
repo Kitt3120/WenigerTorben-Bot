@@ -1,5 +1,4 @@
 using System;
-using System.IO;
 using Microsoft.Extensions.DependencyInjection;
 using WenigerTorbenBot.Services.Config;
 using WenigerTorbenBot.Services.Discord;
@@ -34,6 +33,6 @@ public class DI
         .AddSingleton<IDiscordService>(discordService)
         .BuildServiceProvider();
 
-        
+
     }
 }

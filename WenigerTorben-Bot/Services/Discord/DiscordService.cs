@@ -1,8 +1,6 @@
 using System;
 using System.Collections.Generic;
-using System.Collections.ObjectModel;
 using System.IO;
-using System.Linq;
 using System.Reflection;
 using System.Threading.Tasks;
 using Discord;
@@ -44,7 +42,7 @@ public class DiscordService : Service, IDiscordService
 
     protected override async Task InitializeAsync()
     {
-        if(!configService.Exists("discord.token"))
+        if (!configService.Exists("discord.token"))
             throw new Exception("Config is missing option discord.token");
         string token = configService.Get<string>("discord.token");
         await commandService.AddModulesAsync(Assembly.GetEntryAssembly(), DI.ServiceProvider);
@@ -56,7 +54,7 @@ public class DiscordService : Service, IDiscordService
     //Taken from https://discordnet.dev/guides/getting_started/samples/first-bot/structure.cs
     private async Task HandleMessageAsync(SocketMessage socketMessage)
     {
-        if(socketMessage is not SocketUserMessage socketUserMessage || socketUserMessage.Author.Id == discordSocketClient.CurrentUser.Id || socketUserMessage.Author.IsBot)
+        if (socketMessage is not SocketUserMessage socketUserMessage || socketUserMessage.Author.Id == discordSocketClient.CurrentUser.Id || socketUserMessage.Author.IsBot)
             return;
 
         int pos = 0;
@@ -106,7 +104,7 @@ public class DiscordService : Service, IDiscordService
     public async Task<IGuild> GetGuildAsync(ulong id, CacheMode mode = CacheMode.AllowDownload, RequestOptions options = null) => await Task.Run<IGuild>(() => discordSocketClient.GetGuild(id));
 
     public async Task<IReadOnlyCollection<IGuild>> GetGuildsAsync(CacheMode mode = CacheMode.AllowDownload, RequestOptions options = null) => await Task.Run<IReadOnlyCollection<IGuild>>(() => discordSocketClient.Guilds);
-    
+
 
     public async Task<IInvite> GetInviteAsync(string inviteId, RequestOptions options = null) => await discordSocketClient.GetInviteAsync(inviteId, options);
 

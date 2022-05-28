@@ -42,19 +42,19 @@ public class Program
 
         DI.Init();
 
-        foreach(Service service in ServiceRegistry.GetServices())
+        foreach (Service service in ServiceRegistry.GetServices())
             service.Start();
 
         IHealthService? healthService = ServiceRegistry.Get<IHealthService>();
-        if(healthService is null || !healthService.IsOverallHealthGood())
+        if (healthService is null || !healthService.IsOverallHealthGood())
         {
             Console.WriteLine("Some essential service(s) were not able to initialize successfully. Shutting down.");
             Environment.Exit(1);
         }
 
         Console.ReadKey();
-        
-        foreach(Service service in ServiceRegistry.GetServices().Reverse())
+
+        foreach (Service service in ServiceRegistry.GetServices().Reverse())
             await service.Stop();
     }
 
