@@ -130,4 +130,6 @@ public class DiscordService : Service, IDiscordService
     public async Task StopAsync() => await discordSocketClient.StopAsync();
 
     protected override ServiceConfiguration CreateServiceConfiguration() => new ServiceConfigurationBuilder().SetUsesAsyncInitialization(true).Build();
+
+    public CommandService GetCommandService() => commandService;
 }
