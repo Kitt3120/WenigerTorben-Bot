@@ -19,12 +19,16 @@ along with this program. If not, see < https://www.gnu.org/licenses/>.
 using System;
 using System.Linq;
 using System.Threading.Tasks;
+using Microsoft.Extensions.DependencyInjection;
+using WenigerTorbenBot.CLI;
 using WenigerTorbenBot.Services;
 using WenigerTorbenBot.Services.Health;
 
 namespace WenigerTorbenBot;
 public class Program
 {
+
+    private static bool running = false;
 
     public static void Main()
     {
@@ -33,6 +37,8 @@ public class Program
 
     public static async Task MainAsync()
     {
+        running = true;
+
         PrintLicense();
         Console.WriteLine("\n");
 
@@ -48,11 +54,21 @@ public class Program
             Environment.Exit(1);
         }
 
-        Console.ReadKey();
+        IInputHandler? inputHandler = DI.ServiceProvider.GetService<IInputHandler>();
+        if (inputHandler is null)
+        {
+            Console.WriteLine("The input handler was not able to initialize successfully. Shutting down.");
+            Environment.Exit(1);
+        }
+
+        while (running)
+            inputHandler.Handle(Console.ReadLine());
 
         foreach (Service service in ServiceRegistry.GetServices().Reverse())
             await service.Stop();
     }
+
+    public static void Shutdown() => running = false;
 
     public static void PrintLicense()
     {
