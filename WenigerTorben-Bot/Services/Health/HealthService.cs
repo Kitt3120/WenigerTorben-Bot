@@ -20,7 +20,7 @@ public class HealthService : Service, IHealthService
 
     public bool IsOverallHealthGood() => ServiceRegistry.GetServices()
                                             .Where(service => service.Priority == ServicePriority.Essential)
-                                            .All(service => service.Status == ServiceStatus.Started);
+                                            .All(service => service.Status != ServiceStatus.Failed);
 
     protected override ServiceConfiguration CreateServiceConfiguration() => new ServiceConfigurationBuilder().Build();
 }

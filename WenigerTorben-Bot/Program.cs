@@ -23,6 +23,7 @@ using Microsoft.Extensions.DependencyInjection;
 using WenigerTorbenBot.CLI;
 using WenigerTorbenBot.Services;
 using WenigerTorbenBot.Services.Health;
+using WenigerTorbenBot.Services.Setup;
 
 namespace WenigerTorbenBot;
 public class Program
@@ -47,17 +48,37 @@ public class Program
         foreach (Service service in ServiceRegistry.GetServices())
             service.Start();
 
-        IHealthService? healthService = ServiceRegistry.Get<IHealthService>();
-        if (healthService is null || !healthService.IsOverallHealthGood())
-        {
-            Console.WriteLine("Some essential service(s) were not able to initialize successfully. Shutting down.");
-            Environment.Exit(1);
-        }
-
         IInputHandler? inputHandler = DI.ServiceProvider.GetService<IInputHandler>();
         if (inputHandler is null)
         {
             Console.WriteLine("The input handler was not able to initialize successfully. Shutting down.");
+            Environment.Exit(1);
+        }
+
+        ISetupService? setupService = ServiceRegistry.Get<ISetupService>();
+        if (setupService is null)
+        {
+            Console.WriteLine("The setup service was not able to initialize successfully. Shutting down.");
+            Environment.Exit(1);
+        }
+
+        if (setupService.IsSetupNeeded())
+        {
+            setupService.BeginSetup();
+            while (setupService.IsSetupRunning())
+                inputHandler.Handle(Console.ReadLine());
+
+            foreach (Service service in ServiceRegistry.GetServices().Reverse())
+                await service.Stop();
+
+            Console.WriteLine("Please restart the application");
+            return;
+        }
+
+        IHealthService? healthService = ServiceRegistry.Get<IHealthService>();
+        if (healthService is null || !healthService.IsOverallHealthGood())
+        {
+            Console.WriteLine("Some essential service(s) were not able to initialize successfully. Shutting down.");
             Environment.Exit(1);
         }
 
@@ -70,7 +91,7 @@ public class Program
 
     public static void Shutdown() => running = false;
 
-    public static void PrintLicense()
+    private static void PrintLicense()
     {
         Console.WriteLine($"WenigerTorben-Bot - Der WenigerTorben-Bot für den FHDW Discord Server der Bergischen Banausen{Environment.NewLine}" +
         $"Copyright(C) 2022  Torben Schweren{Environment.NewLine}" +

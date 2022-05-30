@@ -3,7 +3,7 @@ using Discord.Commands;
 
 namespace WenigerTorbenBot.Services.Discord;
 
-public interface IDiscordService : IDiscordClient
+public interface IDiscordService : IService, IDiscordClient
 {
     public CommandService GetCommandService();
 
