@@ -13,10 +13,15 @@ public class InputHandler : IInputHandler
     private readonly List<ICommand> commands;
     private readonly ConcurrentDictionary<int, Action<string?>> interrupts;
 
+    private bool inControl;
+    private readonly object controlLock;
+
     public InputHandler()
     {
         commands = new List<ICommand>();
         interrupts = new ConcurrentDictionary<int, Action<string?>>();
+        inControl = false;
+        controlLock = new object();
 
         foreach (Type type in AppDomain.CurrentDomain.GetAssemblies().SelectMany(assembly => assembly.GetTypes()).Where(assemblyType => !assemblyType.IsInterface && typeof(ICommand).IsAssignableFrom(assemblyType)))
         {
@@ -46,6 +51,8 @@ public class InputHandler : IInputHandler
         }
     }
 
+    public string? ReadInput() => Console.ReadLine();
+
     public void Handle(string? input)
     {
         if (string.IsNullOrWhiteSpace(input))
@@ -61,7 +68,7 @@ public class InputHandler : IInputHandler
         string cmd = input.Split(" ")[0];
         string[] args = input.Replace(cmd, "").Trim().Split(" ");
 
-        IEnumerable<ICommand> foundCommands = commands.Where(command => command.Name.ToLower() == input.ToLower() || command.Aliases.Any(alias => alias.ToLower() == input.ToLower()));
+        IEnumerable<ICommand> foundCommands = commands.Where(command => command.Name.ToLower() == cmd.ToLower() || command.Aliases.Any(alias => alias.ToLower() == cmd.ToLower()));
         if (!foundCommands.Any())
         {
             Console.WriteLine($"Command {cmd} not found");
@@ -75,8 +82,46 @@ public class InputHandler : IInputHandler
             }
             catch (Exception e)
             {
+                //TODO: Proper logging
                 Console.WriteLine($"Exception while handling command {command.Name}: {e.Message}");
             }
+    }
+
+    public void ControlThread(Func<bool>? condition = null)
+    {
+        lock (controlLock)
+        {
+            if (inControl)
+                return;
+            else
+                inControl = true;
+        }
+
+        bool lastConditionState = true;
+        while (inControl && lastConditionState)
+        {
+            if (condition is not null)
+                lastConditionState = condition.Invoke();
+
+            if (lastConditionState)
+                Handle(ReadInput());
+        }
+
+        if (!lastConditionState) //If lastConditionState is false, loop probably ended with inControl = true
+            lock (controlLock)
+                inControl = false;
+    }
+
+    public void ReleaseThread()
+    {
+        lock (controlLock)
+            inControl = false;
+    }
+
+    public bool IsInControl()
+    {
+        lock (controlLock)
+            return inControl;
     }
 
     public int RegisterInterrupt(Action<string?> callback)
