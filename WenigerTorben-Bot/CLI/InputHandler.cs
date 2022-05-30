@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
@@ -10,10 +11,15 @@ public class InputHandler : IInputHandler
 {
 
     private readonly List<ICommand> commands;
+    private readonly ConcurrentDictionary<int, Action<string?>> interrupts;
+
+    public event EventHandler<string?> OnInput = new EventHandler<string?>();
 
     public InputHandler()
     {
         commands = new List<ICommand>();
+        interrupts = new ConcurrentDictionary<int, Action<string?>>();
+
         foreach (Type type in AppDomain.CurrentDomain.GetAssemblies().SelectMany(assembly => assembly.GetTypes()).Where(assemblyType => !assemblyType.IsInterface && typeof(ICommand).IsAssignableFrom(assemblyType)))
         {
             ConstructorInfo[] constructorInfos = type.GetConstructors();
@@ -40,14 +46,19 @@ public class InputHandler : IInputHandler
                     commands.Add(command);
             }
         }
-
-        Console.WriteLine(commands.Count);
     }
 
     public void Handle(string? input)
     {
         if (string.IsNullOrWhiteSpace(input))
             return;
+
+        if (interrupts.IsEmpty)
+        {
+            int id = interrupts.Keys.Min();
+            interrupts[id].Invoke(input);
+            return;
+        }
 
         string cmd = input.Split(" ")[0];
         string[] args = input.Replace(cmd, "").Trim().Split(" ");
@@ -69,4 +80,15 @@ public class InputHandler : IInputHandler
                 Console.WriteLine($"Exception while handling command {command.Name}: {e.Message}");
             }
     }
+
+    public int Interrupt(Action<string?> callback)
+    {
+        int id = 0;
+        if (interrupts.IsEmpty)
+            id = interrupts.Keys.Max() + 1;
+        interrupts.TryAdd(id, callback);
+        return id;
+    }
+
+    public void Release(int key) => interrupts.TryRemove(key, out Action<string>? removedItem);
 }
