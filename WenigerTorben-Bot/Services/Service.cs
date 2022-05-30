@@ -66,7 +66,7 @@ public abstract class Service : IService
             {
                 disposable.Dispose();
             }
-            catch (System.Exception)
+            catch (Exception e)
             {
                 Status = ServiceStatus.Failed;
                 DisposalException = e;
