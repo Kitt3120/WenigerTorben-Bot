@@ -79,7 +79,7 @@ public class InputHandler : IInputHandler
             }
     }
 
-    public int Interrupt(Action<string?> callback)
+    public int RegisterInterrupt(Action<string?> callback)
     {
         int id = 0;
         if (!interrupts.IsEmpty)
@@ -88,5 +88,5 @@ public class InputHandler : IInputHandler
         return id;
     }
 
-    public void Release(int key) => interrupts.TryRemove(key, out Action<string>? removedItem);
+    public void ReleaseInterrupt(int key) => interrupts.TryRemove(key, out Action<string>? removedItem);
 }
