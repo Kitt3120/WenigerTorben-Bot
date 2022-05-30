@@ -28,9 +28,6 @@ using WenigerTorbenBot.Services.Setup;
 namespace WenigerTorbenBot;
 public class Program
 {
-
-    private static bool running = false;
-
     public static void Main()
     {
         MainAsync().GetAwaiter().GetResult();
@@ -38,8 +35,6 @@ public class Program
 
     public static async Task MainAsync()
     {
-        running = true;
-
         PrintLicense();
         Console.WriteLine("\n");
 
@@ -65,31 +60,37 @@ public class Program
         if (setupService.IsSetupNeeded())
         {
             setupService.BeginSetup();
-            while (setupService.IsSetupRunning())
-                inputHandler.Handle(Console.ReadLine());
-
-            foreach (Service service in ServiceRegistry.GetServices().Reverse())
-                await service.Stop();
-
+            inputHandler.ControlThread(setupService.IsSetupRunning);
             Console.WriteLine("Please restart the application");
-            return;
         }
-
-        IHealthService? healthService = ServiceRegistry.Get<IHealthService>();
-        if (healthService is null || !healthService.IsOverallHealthGood())
+        else
         {
-            Console.WriteLine("Some essential service(s) were not able to initialize successfully. Shutting down.");
-            Environment.Exit(1);
-        }
+            IHealthService? healthService = ServiceRegistry.Get<IHealthService>();
+            if (healthService is null || !healthService.IsOverallHealthGood())
+            {
+                Console.WriteLine("Some essential service(s) were not able to initialize successfully. Shutting down.");
+                Environment.Exit(1);
+            }
 
-        while (running)
-            inputHandler.Handle(Console.ReadLine());
+            inputHandler.ControlThread();
+        }
 
         foreach (Service service in ServiceRegistry.GetServices().Reverse())
             await service.Stop();
     }
 
-    public static void Shutdown() => running = false;
+    public static void Shutdown()
+    {
+        IInputHandler? inputHandler = DI.ServiceProvider.GetService<IInputHandler>();
+        if (inputHandler is null)
+        {
+            //TODO: Proper logging
+            Console.WriteLine("Error: IInputHandler was null");
+            Environment.Exit(1);
+        }
+        if (inputHandler.IsInControl())
+            inputHandler.ReleaseThread();
+    }
 
     private static void PrintLicense()
     {
