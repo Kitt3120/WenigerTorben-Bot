@@ -13,8 +13,6 @@ public class InputHandler : IInputHandler
     private readonly List<ICommand> commands;
     private readonly ConcurrentDictionary<int, Action<string?>> interrupts;
 
-    public event EventHandler<string?> OnInput = new EventHandler<string?>();
-
     public InputHandler()
     {
         commands = new List<ICommand>();
@@ -53,7 +51,7 @@ public class InputHandler : IInputHandler
         if (string.IsNullOrWhiteSpace(input))
             return;
 
-        if (interrupts.IsEmpty)
+        if (!interrupts.IsEmpty)
         {
             int id = interrupts.Keys.Min();
             interrupts[id].Invoke(input);
@@ -84,7 +82,7 @@ public class InputHandler : IInputHandler
     public int Interrupt(Action<string?> callback)
     {
         int id = 0;
-        if (interrupts.IsEmpty)
+        if (!interrupts.IsEmpty)
             id = interrupts.Keys.Max() + 1;
         interrupts.TryAdd(id, callback);
         return id;
