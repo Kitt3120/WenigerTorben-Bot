@@ -5,6 +5,7 @@ using WenigerTorbenBot.Services.Config;
 using WenigerTorbenBot.Services.Discord;
 using WenigerTorbenBot.Services.File;
 using WenigerTorbenBot.Services.Health;
+using WenigerTorbenBot.Services.Setup;
 
 namespace WenigerTorbenBot;
 
@@ -20,21 +21,22 @@ public class DI
         This would result in the HealthService not checking for any Services on start
         because none would be registered yet.
         Sadly, there is no option to have a ServiceProvider instantiate all singletons
-        intially.
+        initially.
         */
+        InputHandler inputHandler = new InputHandler();
         HealthService healthService = new HealthService();
         FileService fileService = new FileService();
         ConfigService configService = new ConfigService(fileService);
         DiscordService discordService = new DiscordService(configService);
+        SetupService setupService = new SetupService(inputHandler, configService, discordService);
 
         ServiceProvider = new ServiceCollection()
-        .AddSingleton<IInputHandler, InputHandler>()
+        .AddSingleton<IInputHandler>(inputHandler)
         .AddSingleton<IHealthService>(healthService)
         .AddSingleton<IFileService>(fileService)
         .AddSingleton<IConfigService>(configService)
         .AddSingleton<IDiscordService>(discordService)
+        .AddSingleton<ISetupService>(setupService)
         .BuildServiceProvider();
-
-
     }
 }

@@ -13,16 +13,17 @@ namespace WenigerTorbenBot.Services.Discord;
 public class DiscordService : Service, IDiscordService
 {
     public override string Name => "Discord";
-
     public override ServicePriority Priority => ServicePriority.Essential;
 
     private readonly IConfigService configService;
+
     private readonly DiscordSocketClient discordSocketClient;
     private readonly CommandService commandService;
 
     public DiscordService(IConfigService configService) : base()
     {
         this.configService = configService;
+
         this.discordSocketClient = new DiscordSocketClient(new DiscordSocketConfig()
         {
             LogLevel = LogSeverity.Info,
@@ -31,13 +32,11 @@ public class DiscordService : Service, IDiscordService
             AlwaysResolveStickers = true,
             MessageCacheSize = 50
         });
-
         this.commandService = new CommandService(new CommandServiceConfig()
         {
             LogLevel = LogSeverity.Info,
             CaseSensitiveCommands = false
         });
-
     }
 
     protected override async Task InitializeAsync()
