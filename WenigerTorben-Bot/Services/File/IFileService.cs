@@ -1,6 +1,6 @@
 namespace WenigerTorbenBot.Services.File;
 
-public interface IFileService
+public interface IFileService : IService
 {
     public string DataPath { get; }
     public string ConfigPath { get; }

@@ -2,7 +2,7 @@ using System.Threading.Tasks;
 
 namespace WenigerTorbenBot.Services.Config;
 
-public interface IConfigService
+public interface IConfigService : IService
 {
     public bool Exists(string key);
 
