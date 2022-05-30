@@ -79,12 +79,6 @@ public abstract class Service : IService
         Status = ServiceStatus.Stopped;
     }
 
-    public async Task Restart()
-    {
-        await Stop();
-        Start();
-    }
-
     public bool IsAvailable() => Status == ServiceStatus.Started;
 
     protected virtual void Initialize() { throw new NotImplementedException($"Initialize() has not been implemented for {Name}"); }

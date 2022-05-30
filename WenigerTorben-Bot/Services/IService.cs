@@ -13,7 +13,6 @@ public interface IService
 
     public void Start();
     public Task Stop();
-    public Task Restart();
 
     public bool IsAvailable();
 
