@@ -38,7 +38,15 @@ public class Program
         PrintLicense();
         Console.WriteLine("\n");
 
-        DI.Init();
+        try
+        {
+            DI.Init();
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine($"Error building the dependency container: {e.Message}. Shutting down.");
+            Environment.Exit(1);
+        }
 
         foreach (Service service in ServiceRegistry.GetServices())
             service.Start();
