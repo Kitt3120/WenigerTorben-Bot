@@ -2,10 +2,7 @@ namespace WenigerTorbenBot.Services.File;
 
 public interface IFileService : IService
 {
-    public string DataPath { get; }
-    public string ConfigPath { get; }
-
-    public string GetConfigDirectory();
+    public string GetDataDirectory();
 
     public string GetPath(params string[] paths);
 

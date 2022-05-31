@@ -1,4 +1,5 @@
 using System;
+using System.Data.Common;
 using System.IO;
 using WenigerTorbenBot.Utils;
 
@@ -10,28 +11,14 @@ public class FileService : Service, IFileService
 
     public override ServicePriority Priority => ServicePriority.Essential;
 
-    public string DataPath => $"{Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData)}{Path.DirectorySeparatorChar}WenigerTorbenBot";
-
-    public string ConfigPath => $"{GetConfigDirectory()}{Path.DirectorySeparatorChar}config.json";
-
     protected override void Initialize()
     {
-        Directory.CreateDirectory(DataPath);
-        if (PlatformUtils.GetOSPlatform() == PlatformID.Unix)
-            Directory.CreateDirectory(GetConfigDirectory());
+        Directory.CreateDirectory(GetDataDirectory());
     }
 
-    public string GetConfigDirectory()
-    {
-        return PlatformUtils.GetOSPlatform() switch
-        {
-            PlatformID.Win32NT => DataPath,
-            PlatformID.Unix => $"{Environment.GetFolderPath(Environment.SpecialFolder.UserProfile)}{Path.DirectorySeparatorChar}.config{Path.DirectorySeparatorChar}WenigerTorbenBot",
-            _ => string.Empty,
-        };
-    }
+    public string GetDataDirectory() => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "WenigerTorben-Bot");
 
-    public string GetPath(params string[] paths) => $"{DataPath}{Path.DirectorySeparatorChar}{string.Join(Path.DirectorySeparatorChar, paths)}";
+    public string GetPath(params string[] paths) => Path.Combine(GetDataDirectory(), Path.Combine(paths));
 
     public string GetAndCreateDirectory(params string[] paths)
     {
