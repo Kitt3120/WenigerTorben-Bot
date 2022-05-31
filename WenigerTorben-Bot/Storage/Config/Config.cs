@@ -4,7 +4,7 @@ using System.IO;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
 
-namespace WenigerTorbenBot.Config;
+namespace WenigerTorbenBot.Storage.Config;
 
 public class Config : IConfig
 {
@@ -65,7 +65,7 @@ public class Config : IConfig
         if (!File.Exists(filepath))
         {
             //TODO: Proper logging
-            Console.WriteLine($"Error while loading config: File {filepath} does not exist.");
+            Console.WriteLine($"Error while loading config: File {filepath} does not exist. Creating empty config.");
             return;
         }
 
@@ -85,7 +85,7 @@ public class Config : IConfig
         if (!File.Exists(filepath))
         {
             //TODO: Proper logging
-            Console.WriteLine($"Error while loading config: File {filepath} does not exist.");
+            Console.WriteLine($"Error while loading config: File {filepath} does not exist. Creating empty config.");
             return;
         }
 
@@ -104,4 +104,9 @@ public class Config : IConfig
 
     public async Task SaveAsync() => await System.IO.File.WriteAllTextAsync(filepath, JsonConvert.SerializeObject(properties, Formatting.Indented));
 
+    public void Delete()
+    {
+        properties.Clear();
+        File.Delete(filepath);
+    }
 }

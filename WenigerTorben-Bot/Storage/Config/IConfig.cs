@@ -1,6 +1,6 @@
 using System.Threading.Tasks;
 
-namespace WenigerTorbenBot.Config;
+namespace WenigerTorbenBot.Storage.Config;
 
 public interface IConfig
 {
@@ -31,4 +31,7 @@ public interface IConfig
     public void Save();
 
     public Task SaveAsync();
+
+    public void Delete();
+
 }
