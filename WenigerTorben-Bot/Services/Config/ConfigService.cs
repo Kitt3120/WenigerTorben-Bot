@@ -1,8 +1,11 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
+using System.Linq;
 using System.Threading.Tasks;
-using Newtonsoft.Json;
 using WenigerTorbenBot.Services.File;
+using WenigerTorbenBot.Storage.Config;
+using WenigerTorbenBot.Utils;
 
 namespace WenigerTorbenBot.Services.Config;
 
@@ -12,87 +15,110 @@ public class ConfigService : Service, IConfigService, IAsyncDisposable
     public override ServicePriority Priority => ServicePriority.Essential;
 
     private readonly IFileService fileService;
-    private Dictionary<string, object> properties = new Dictionary<string, object>();
 
+    private Dictionary<string, IConfig> configs = new Dictionary<string, IConfig>();
 
     public ConfigService(IFileService fileService) : base()
     {
         this.fileService = fileService;
     }
 
-    protected override async Task InitializeAsync() => await LoadAsync();
-
-    public bool Exists(string key) => properties.ContainsKey(key);
-
-    public object Get(string key) => properties[key];
-
-    public T Get<T>(string key) => (T)properties[key];
-
-    public object this[string key]
+    protected override async Task InitializeAsync()
     {
-        get => Get(key);
-        set => Set(key, value);
+        Directory.CreateDirectory(GetConfigsDirectory());
+        await LoadAllAsync();
+        if (!Exists("global"))
+            Load("global");
     }
 
-    public void Set(string key, object value) => properties[key] = value;
-
-    public object GetOrSet(string key, object defaultValue)
+    public string GetConfigsDirectory()
     {
-        if (Exists(key))
-            return Get(key);
-        else
+        return PlatformUtils.GetOSPlatform() switch
         {
-            Set(key, defaultValue);
-            return defaultValue;
+            PlatformID.Win32NT => Path.Combine(fileService.GetDataDirectory(), "Configs"),
+            PlatformID.Unix => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".config", "WenigerTorben-Bot"),
+            _ => string.Empty
+        };
+    }
+
+    public string GetConfigFilePath(string guildId = "global") => Path.Join(GetConfigsDirectory(), $"{guildId}.json");
+
+    public IEnumerable<string> GetGuildIds() => configs.Keys.Where(key => key != "global");
+
+    public bool Exists(string guildId = "global") => configs.ContainsKey(guildId);
+
+    public IConfig Get(string guildId = "global") => configs[guildId];
+
+    public void Delete(string guildId)
+    {
+        configs[guildId].Delete();
+        configs.Remove(guildId);
+    }
+
+    public void Load(string guildId = "global")
+    {
+        if (Exists(guildId))
+        {
+            //TODO: Proper logging
+            Console.WriteLine($"Error while loading guild config {guildId}: Config already loaded.");
+            return;
+        }
+
+        IConfig config = new Storage.Config.Config(GetConfigFilePath(guildId));
+        config.Load();
+        configs[guildId] = config;
+    }
+
+    public async Task LoadAsync(string guildId = "global")
+    {
+
+        if (Exists(guildId))
+        {
+            //TODO: Proper logging
+            Console.WriteLine($"Error while loading guild config {guildId}: Config already loaded.");
+            return;
+        }
+
+        IConfig config = new Storage.Config.Config(GetConfigFilePath(guildId));
+        await config.LoadAsync();
+        configs[guildId] = config;
+    }
+
+    public void LoadAll()
+    {
+        foreach (string configPath in Directory.GetFiles(GetConfigsDirectory()))
+        {
+            string guildId = Path.GetFileNameWithoutExtension(configPath);
+            IConfig config = new Storage.Config.Config(GetConfigFilePath(guildId));
+            config.Load();
+            configs[guildId] = config;
         }
     }
 
-    public T GetOrSet<T>(string key, T defaultValue)
+    public async Task LoadAllAsync()
     {
-        if (Exists(key))
-            return Get<T>(key);
-        else
+        foreach (string configPath in Directory.GetFiles(GetConfigsDirectory()))
         {
-            Set(key, defaultValue);
-            return defaultValue;
+            string guildId = Path.GetFileNameWithoutExtension(configPath);
+            IConfig config = new Storage.Config.Config(GetConfigFilePath(guildId));
+            await config.LoadAsync();
+            configs[guildId] = config;
         }
     }
 
-    public void Remove(string key) => properties.Remove(key);
+    public void Save(string guildId = "global") => configs[guildId].Save();
 
-    //TODO: Null-Check
-    public void Load()
+    public async Task SaveAsync(string guildId = "global") => await configs[guildId].SaveAsync();
+
+    public void SaveAll()
     {
-        if (System.IO.File.Exists(fileService.ConfigPath))
-        {
-            Dictionary<string, object>? deserialized = JsonConvert.DeserializeObject<Dictionary<string, object>>(System.IO.File.ReadAllText(fileService.ConfigPath));
-            if (deserialized is not null)
-                properties = deserialized;
-        }
+        foreach (IConfig config in configs.Values)
+            config.Save();
     }
 
-    public async Task LoadAsync()
-    {
-        
-        if (System.IO.File.Exists(fileService.ConfigPath))
-        {
-            Dictionary<string, object>? deserialized = JsonConvert.DeserializeObject<Dictionary<string, object>>(await System.IO.File.ReadAllTextAsync(fileService.ConfigPath));
-            if (deserialized is not null)
-                properties = deserialized;
-        }
-    }
+    public async Task SaveAllAsync() => await Task.WhenAll(configs.Values.Select(config => config.SaveAsync()).ToArray());
 
-    public void Save()
-    {
-        if(Status == ServiceStatus.Started)
-            System.IO.File.WriteAllText(fileService.ConfigPath, JsonConvert.SerializeObject(properties));
-    }
-    public async Task SaveAsync()
-    {
-        if (Status == ServiceStatus.Started)
-            await System.IO.File.WriteAllTextAsync(fileService.ConfigPath, JsonConvert.SerializeObject(properties));
-    }
     protected override ServiceConfiguration CreateServiceConfiguration() => new ServiceConfigurationBuilder().SetUsesAsyncInitialization(true).Build();
 
-    public async ValueTask DisposeAsync() => await SaveAsync();
+    public async ValueTask DisposeAsync() => await SaveAllAsync();
 }
