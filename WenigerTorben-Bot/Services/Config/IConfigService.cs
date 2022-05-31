@@ -1,34 +1,37 @@
+using System.Collections.Generic;
 using System.Threading.Tasks;
+using WenigerTorbenBot.Storage.Config;
 
 namespace WenigerTorbenBot.Services.Config;
 
 public interface IConfigService : IService
 {
-    public bool Exists(string key);
+    public string GetConfigsDirectory();
 
-    public object Get(string key);
+    public string GetConfigFilePath(string guildId = "global");
 
-    public T Get<T>(string key);
+    public IEnumerable<string> GetGuildIds();
 
-    public object this[string key]
-    {
-        get;
-        set;
-    }
+    public bool Exists(string guildId = "global");
 
-    public void Set(string key, object value);
+    public IConfig Get(string guildId = "global");
 
-    public object GetOrSet(string key, object defaultValue);
+    public void Delete(string guildId);
 
-    public T GetOrSet<T>(string key, T defaultValue);
+    public void Load(string guildId = "global");
 
-    public void Remove(string key);
+    public Task LoadAsync(string guildId = "global");
 
-    public void Load();
+    public void LoadAll();
 
-    public Task LoadAsync();
+    public Task LoadAllAsync();
 
-    public void Save();
+    public void Save(string guildId = "global");
 
-    public Task SaveAsync();
+    public Task SaveAsync(string guildId = "global");
+
+    public void SaveAll();
+
+    public Task SaveAllAsync();
+
 }

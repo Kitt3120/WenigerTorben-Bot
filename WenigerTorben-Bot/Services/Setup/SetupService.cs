@@ -5,6 +5,7 @@ using System.Linq;
 using WenigerTorbenBot.CLI;
 using WenigerTorbenBot.Services.Config;
 using WenigerTorbenBot.Services.Discord;
+using WenigerTorbenBot.Storage.Config;
 
 namespace WenigerTorbenBot.Services.Setup;
 
@@ -17,6 +18,7 @@ public class SetupService : Service, ISetupService
     private readonly IConfigService configService;
     private readonly IDiscordService discordService;
 
+    private IConfig? config;
     private readonly string[] neededKeys;
     private int id;
     private int state;
@@ -36,9 +38,11 @@ public class SetupService : Service, ISetupService
     }
 
     protected override void Initialize()
-    { }
+    {
+        config = configService.Get();
+    }
 
-    public bool IsSetupNeeded() => neededKeys.Any(key => !configService.Exists(key));
+    public bool IsSetupNeeded() => neededKeys.Any(key => !config.Exists(key));
 
     public void BeginSetup()
     {
@@ -71,7 +75,7 @@ public class SetupService : Service, ISetupService
         switch (state)
         {
             case 0:
-                configService["discord.token"] = input;
+                config["discord.token"] = input;
                 state++;
                 break;
             default:

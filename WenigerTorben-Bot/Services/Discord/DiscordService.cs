@@ -1,12 +1,15 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Reflection;
+using System.Threading;
 using System.Threading.Tasks;
 using Discord;
 using Discord.Commands;
 using Discord.WebSocket;
 using WenigerTorbenBot.Services.Config;
+using WenigerTorbenBot.Storage.Config;
 
 namespace WenigerTorbenBot.Services.Discord;
 
@@ -17,12 +20,17 @@ public class DiscordService : Service, IDiscordService
 
     private readonly IConfigService configService;
 
+    private bool ready;
     private readonly DiscordSocketClient discordSocketClient;
     private readonly CommandService commandService;
+
+    private IConfig? config;
 
     public DiscordService(IConfigService configService) : base()
     {
         this.configService = configService;
+
+        this.ready = false;
 
         this.discordSocketClient = new DiscordSocketClient(new DiscordSocketConfig()
         {
@@ -41,13 +49,72 @@ public class DiscordService : Service, IDiscordService
 
     protected override async Task InitializeAsync()
     {
-        if (!configService.Exists("discord.token"))
+        config = configService.Get();
+
+        if (!config.Exists("discord.token"))
             throw new Exception("Config is missing option discord.token");
-        string token = configService.Get<string>("discord.token");
+        string token = config.Get<string>("discord.token");
+
         await commandService.AddModulesAsync(Assembly.GetEntryAssembly(), DI.ServiceProvider);
         discordSocketClient.MessageReceived += HandleMessageAsync;
+
+        discordSocketClient.Ready += OnDiscordClientReady;
+        discordSocketClient.JoinedGuild += OnGuildJoinCreateConfig;
+        discordSocketClient.LeftGuild += OnGuildLeftDeleteConfig;
+
         await discordSocketClient.LoginAsync(TokenType.Bot, token);
         await StartAsync();
+
+        while (!ready)
+            await Task.Delay(500);
+
+        SynchronizeConfigs();
+    }
+
+    private void SynchronizeConfigs()
+    {
+        IEnumerable<string> loadedGuildIds = configService.GetGuildIds();
+        IEnumerable<string> actualGuildIds = discordSocketClient.Guilds.Select(guild => Convert.ToString(guild.Id));
+
+        IEnumerable<string> obsoleteLoadedGuildIds = loadedGuildIds.Where(guildId => !actualGuildIds.Contains(guildId));
+        IEnumerable<string> newGuildIds = actualGuildIds.Where(guildId => !loadedGuildIds.Contains(guildId));
+
+        int obsoleteAmount = obsoleteLoadedGuildIds.Count();
+        int newAmount = newGuildIds.Count();
+
+        if (obsoleteAmount > 0)
+        {
+            //TODO: Proper logging
+            Console.WriteLine($"Found {obsoleteAmount} obsolete guild {(obsoleteAmount > 1 ? "configs" : "config")}. Cleaning up.");
+            foreach (string guildId in obsoleteLoadedGuildIds)
+                configService.Delete(guildId);
+        }
+
+        if (newAmount > 0)
+        {
+            Console.WriteLine($"Found {newAmount} new {(newAmount > 1 ? "guilds" : "guild")}. Creating {(newAmount > 1 ? "configs" : "config")}.");
+            foreach (string guildId in newGuildIds)
+                configService.Load(guildId);
+        }
+    }
+
+    private Task OnDiscordClientReady()
+    {
+        ready = true;
+        return Task.CompletedTask;
+    }
+
+    private async Task OnGuildJoinCreateConfig(SocketGuild socketGuild)
+    {
+        //TODO: Proper logging
+        Console.WriteLine($"Joined Guild {socketGuild.Id}. Creating config.");
+        await configService.LoadAsync(Convert.ToString(socketGuild.Id));
+    }
+    private Task OnGuildLeftDeleteConfig(SocketGuild socketGuild)
+    {
+        Console.WriteLine($"Left Guild {socketGuild.Id}. Deleting config.");
+        configService.Delete(Convert.ToString(socketGuild.Id));
+        return Task.CompletedTask;
     }
 
     //Taken from https://discordnet.dev/guides/getting_started/samples/first-bot/structure.cs
@@ -65,6 +132,8 @@ public class DiscordService : Service, IDiscordService
                 await socketUserMessage.Channel.SendMessageAsync($"An error occured while processing command: {result.ErrorReason}");
         }
     }
+
+    //Proxy methods
 
     public ConnectionState ConnectionState => discordSocketClient.ConnectionState;
 
