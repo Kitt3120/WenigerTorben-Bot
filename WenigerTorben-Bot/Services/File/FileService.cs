@@ -16,7 +16,15 @@ public class FileService : Service, IFileService
         Directory.CreateDirectory(GetDataDirectory());
     }
 
-    public string GetDataDirectory() => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "WenigerTorben-Bot");
+    public string GetDataDirectory()
+    {
+        return PlatformUtils.GetOSPlatform() switch
+        {
+            PlatformID.Win32NT => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "WenigerTorben-Bot"),
+            PlatformID.Unix => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".local", "share", "WenigerTorben-Bot"),
+            _ => string.Empty
+        };
+    }
 
     public string GetPath(params string[] paths) => Path.Combine(GetDataDirectory(), Path.Combine(paths));
 
