@@ -2,6 +2,7 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Discord;
 using Discord.Rest;
@@ -110,6 +111,9 @@ public class FancyMuteService : Service, IFancyMuteService
 
         foreach (string reaction in reactions)
             await socketMessage.AddReactionAsync(Emoji.Parse(reaction));
+
+        await Task.Delay(1500);
+        await socketMessage.DeleteAsync();
     }
 
     protected override ServiceConfiguration CreateServiceConfiguration() => new ServiceConfigurationBuilder().Build();
