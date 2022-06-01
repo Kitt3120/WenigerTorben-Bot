@@ -6,5 +6,6 @@ namespace WenigerTorbenBot.Services.Discord;
 public interface IDiscordService : IService, IDiscordClient
 {
     public CommandService GetCommandService();
+    public IDiscordClient GetWrappedClient();
 
 }

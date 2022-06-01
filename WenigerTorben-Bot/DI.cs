@@ -4,6 +4,7 @@ using Serilog;
 using WenigerTorbenBot.CLI;
 using WenigerTorbenBot.Services.Config;
 using WenigerTorbenBot.Services.Discord;
+using WenigerTorbenBot.Services.FancyMute;
 using WenigerTorbenBot.Services.File;
 using WenigerTorbenBot.Services.Health;
 using WenigerTorbenBot.Services.Log;
@@ -34,6 +35,7 @@ public class DI
         ConfigService configService = new ConfigService(fileService);
         DiscordService discordService = new DiscordService(configService);
         SetupService setupService = new SetupService(inputHandler, configService, discordService);
+        FancyMuteService fancyMuteService = new FancyMuteService(discordService);
 
         ServiceProvider = new ServiceCollection()
         .AddSingleton<IInputHandler>(inputHandler)
@@ -43,6 +45,7 @@ public class DI
         .AddSingleton<IConfigService>(configService)
         .AddSingleton<IDiscordService>(discordService)
         .AddSingleton<ISetupService>(setupService)
+        .AddSingleton<IFancyMuteService>(fancyMuteService)
         .BuildServiceProvider();
     }
 }
