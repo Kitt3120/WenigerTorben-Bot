@@ -1,10 +1,12 @@
 using System;
 using Microsoft.Extensions.DependencyInjection;
+using Serilog;
 using WenigerTorbenBot.CLI;
 using WenigerTorbenBot.Services.Config;
 using WenigerTorbenBot.Services.Discord;
 using WenigerTorbenBot.Services.File;
 using WenigerTorbenBot.Services.Health;
+using WenigerTorbenBot.Services.Log;
 using WenigerTorbenBot.Services.Setup;
 
 namespace WenigerTorbenBot;
@@ -15,6 +17,8 @@ public class DI
 
     public static void Init()
     {
+        Log.Debug("Initializing ServiceProvider");
+
         /*
         Services have to be instantiated manually instead of by the ServiceProvider
         because it only instantiates the Services on demand, not initially.
@@ -26,6 +30,7 @@ public class DI
         InputHandler inputHandler = new InputHandler();
         HealthService healthService = new HealthService();
         FileService fileService = new FileService();
+        LogService logService = new LogService(fileService);
         ConfigService configService = new ConfigService(fileService);
         DiscordService discordService = new DiscordService(configService);
         SetupService setupService = new SetupService(inputHandler, configService, discordService);
@@ -33,6 +38,7 @@ public class DI
         ServiceProvider = new ServiceCollection()
         .AddSingleton<IInputHandler>(inputHandler)
         .AddSingleton<IHealthService>(healthService)
+        .AddSingleton<ILogService>(logService)
         .AddSingleton<IFileService>(fileService)
         .AddSingleton<IConfigService>(configService)
         .AddSingleton<IDiscordService>(discordService)

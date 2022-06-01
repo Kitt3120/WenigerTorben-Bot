@@ -40,13 +40,15 @@ public class SetupService : Service, ISetupService
     protected override void Initialize()
     {
         config = configService.Get();
+        if (config is null)
+            throw new Exception("Config was null"); //TODO: Proper exception
     }
 
     public bool IsSetupNeeded() => neededKeys.Any(key => !config.Exists(key));
 
     public void BeginSetup()
     {
-        Console.WriteLine("Your config is missing some important settings. Entering setup...");
+        Serilog.Log.Debug("Entering setup");
         id = inputHandler.RegisterInterrupt(Handle);
         running = true;
         PrintPrompt();
@@ -56,13 +58,15 @@ public class SetupService : Service, ISetupService
 
     private void PrintPrompt()
     {
+        Serilog.Log.Debug("Setup now in state {state}", state);
+
         switch (state)
         {
             case 0:
                 Console.Write("Please provide a Discord token: ");
                 break;
             default:
-                Console.WriteLine("Invalid state"); //TODO: Proper logging
+                Serilog.Log.Error("Setup is in an invalid state");
                 break;
         }
     }
@@ -79,7 +83,6 @@ public class SetupService : Service, ISetupService
                 state++;
                 break;
             default:
-                Console.WriteLine("Invalid state"); //TODO: Proper logging
                 break;
         }
 
@@ -87,7 +90,7 @@ public class SetupService : Service, ISetupService
         {
             inputHandler.ReleaseInterrupt(id);
             running = false;
-            Console.WriteLine("Setup complete");
+            Serilog.Log.Information("Setup complete");
         }
     }
 

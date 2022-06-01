@@ -20,10 +20,12 @@ using System;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
+using Serilog;
 using WenigerTorbenBot.CLI;
 using WenigerTorbenBot.Services;
 using WenigerTorbenBot.Services.Health;
 using WenigerTorbenBot.Services.Setup;
+using WenigerTorbenBot.Utils;
 
 namespace WenigerTorbenBot;
 public class Program
@@ -38,13 +40,22 @@ public class Program
         PrintLicense();
         Console.WriteLine("\n");
 
+        //Simple throwaway console-only logger to use before LogService initialized the real logger
+        Log.Logger = new LoggerConfiguration().WriteTo.Console().CreateLogger();
+
+        if (!PlatformUtils.IsOSPlatformSupported())
+        {
+            Log.Error("Your platform is not supported");
+            Environment.Exit(1);
+        }
+
         try
         {
             DI.Init();
         }
         catch (Exception e)
         {
-            Console.WriteLine($"Error building the dependency container: {e.Message}. Shutting down.");
+            Log.Error(e, "Error building the dependency container. Shutting down.");
             Environment.Exit(1);
         }
 
@@ -54,29 +65,30 @@ public class Program
         IInputHandler? inputHandler = DI.ServiceProvider.GetService<IInputHandler>();
         if (inputHandler is null)
         {
-            Console.WriteLine("The input handler was not able to initialize successfully. Shutting down.");
+            Log.Error("The input handler was not able to initialize successfully. Shutting down.");
             Environment.Exit(1);
         }
 
         ISetupService? setupService = ServiceRegistry.Get<ISetupService>();
         if (setupService is null)
         {
-            Console.WriteLine("The setup service was not able to initialize successfully. Shutting down.");
+            Log.Error("The setup service was not able to initialize successfully. Shutting down.");
             Environment.Exit(1);
         }
 
         if (setupService.IsSetupNeeded())
         {
+            Log.Information("Your config is missing some important settings. Entering setup...");
             setupService.BeginSetup();
-            inputHandler.ControlThread(setupService.IsSetupRunning);
-            Console.WriteLine("Please restart the application");
+            inputHandler.ControlThread(condition: setupService.IsSetupRunning);
+            Log.Information("Please restart the application");
         }
         else
         {
             IHealthService? healthService = ServiceRegistry.Get<IHealthService>();
             if (healthService is null || !healthService.IsOverallHealthGood())
             {
-                Console.WriteLine("Some essential service(s) were not able to initialize successfully. Shutting down.");
+                Log.Error("Some essential service(s) were not able to initialize successfully. Shutting down.");
                 Environment.Exit(1);
             }
 
@@ -92,10 +104,10 @@ public class Program
         IInputHandler? inputHandler = DI.ServiceProvider.GetService<IInputHandler>();
         if (inputHandler is null)
         {
-            //TODO: Proper logging
-            Console.WriteLine("Error: IInputHandler was null");
+            Log.Error("Service Provider returned null for IInputHandler while shutting down");
             Environment.Exit(1);
         }
+
         if (inputHandler.IsInControl())
             inputHandler.ReleaseThread();
     }

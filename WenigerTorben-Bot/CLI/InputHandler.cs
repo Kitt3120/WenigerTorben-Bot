@@ -3,6 +3,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using Serilog;
 using WenigerTorbenBot.CLI.Command;
 
 namespace WenigerTorbenBot.CLI;
@@ -23,31 +24,67 @@ public class InputHandler : IInputHandler
         inControl = false;
         controlLock = new object();
 
+        Log.Debug("Registering CLI commands");
         foreach (Type type in AppDomain.CurrentDomain.GetAssemblies().SelectMany(assembly => assembly.GetTypes()).Where(assemblyType => !assemblyType.IsInterface && typeof(ICommand).IsAssignableFrom(assemblyType)))
         {
-            ConstructorInfo[] constructorInfos = type.GetConstructors();
-            List<object> parameters = new List<object>();
-            bool successfully = true;
+            Log.Debug("Found ICommand implementing type: {type}", type.Name);
 
-            if (constructorInfos.Length > 0)
+            ConstructorInfo[] constructorInfos = type.GetConstructors();
+            if (constructorInfos.Length == 0)
             {
-                ParameterInfo[] parameterInfos = constructorInfos[0].GetParameters();
+                Log.Warning("Tried to construct CLI command {type} but it has no constructor", type.Name);
+                continue;
+            }
+
+            bool foundConstructor = false;
+            List<object> parameters = new List<object>();
+
+            foreach (ConstructorInfo constructorInfo in constructorInfos)
+            {
+                bool successfully = true;
+                ParameterInfo[] parameterInfos = constructorInfo.GetParameters();
                 foreach (ParameterInfo parameterInfo in parameterInfos)
                 {
-                    object? obj = DI.ServiceProvider.GetService(parameterInfo.ParameterType);
-                    if (obj is null)
+                    object? service = DI.ServiceProvider.GetService(parameterInfo.ParameterType);
+                    if (service is null)
+                    {
                         successfully = false;
-                    else
-                        parameters.Add(obj);
+                        break;
+                    }
+
+                    parameters.Add(service);
                 }
+
+                if (successfully)
+                {
+                    foundConstructor = true;
+                    break;
+                }
+                else
+                    parameters.Clear();
             }
 
-            if (successfully)
+            if (!foundConstructor)
             {
-                object? obj = Activator.CreateInstance(type, parameters.ToArray());
-                if (obj is not null && obj is ICommand command)
-                    commands.Add(command);
+                Log.Error("Tried to create instance of CLI command {type} but none of its constructors could be satisfied.", type.Name);
+                continue;
             }
+
+            object? obj = Activator.CreateInstance(type, parameters.ToArray());
+
+            if (obj is null)
+            {
+                Log.Error("Tried to create instance of CLI command {type} but returned object was null.", type.Name);
+                continue;
+            }
+
+            if (obj is not ICommand command)
+            {
+                Log.Error("Tried to create instance of CLI command {type} but returned object was not an ICommand.", type.Name);
+                continue;
+            }
+
+            commands.Add(command);
         }
     }
 
@@ -76,15 +113,16 @@ public class InputHandler : IInputHandler
         }
 
         foreach (ICommand command in foundCommands)
+        {
             try
             {
                 command.OnCommand(args);
             }
             catch (Exception e)
             {
-                //TODO: Proper logging
-                Console.WriteLine($"Exception while handling command {command.Name}: {e.Message}");
+                Log.Error(e, "Exception while handling command {command}", command.Name);
             }
+        }
     }
 
     public void ControlThread(Func<bool>? condition = null)

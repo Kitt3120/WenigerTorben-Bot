@@ -27,8 +27,8 @@ public class ConfigService : Service, IConfigService, IAsyncDisposable
     {
         Directory.CreateDirectory(GetConfigsDirectory());
         await LoadAllAsync();
-        if (!Exists("global"))
-            Load("global");
+        if (!Exists())
+            Load();
     }
 
     public string GetConfigsDirectory()
@@ -37,7 +37,7 @@ public class ConfigService : Service, IConfigService, IAsyncDisposable
         {
             PlatformID.Win32NT => Path.Combine(fileService.GetDataDirectory(), "Configs"),
             PlatformID.Unix => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".config", "WenigerTorben-Bot"),
-            _ => string.Empty
+            _ => Path.Combine(fileService.GetDataDirectory(), "Configs")
         };
     }
 
@@ -59,8 +59,7 @@ public class ConfigService : Service, IConfigService, IAsyncDisposable
     {
         if (Exists(guildId))
         {
-            //TODO: Proper logging
-            Console.WriteLine($"Error while loading guild config {guildId}: Config already loaded.");
+            Serilog.Log.Error("Error while loading config {guildId}: Config already loaded.", guildId);
             return;
         }
 
@@ -74,8 +73,7 @@ public class ConfigService : Service, IConfigService, IAsyncDisposable
 
         if (Exists(guildId))
         {
-            //TODO: Proper logging
-            Console.WriteLine($"Error while loading guild config {guildId}: Config already loaded.");
+            Serilog.Log.Error("Error while loading config {guildId}: Config already loaded.", guildId);
             return;
         }
 
