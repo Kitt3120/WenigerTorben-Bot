@@ -52,9 +52,11 @@ public class DiscordService : Service, IDiscordService
         config = configService.Get();
 
         if (!config.Exists("discord.token"))
-            throw new Exception("Config is missing option discord.token");
+            throw new Exception("Config is missing option discord.token"); //TODO: Proper exception
+
         string token = config.Get<string>("discord.token");
 
+        Serilog.Log.Debug("Waiting for DiscordSocketClient to finish");
         await commandService.AddModulesAsync(Assembly.GetEntryAssembly(), DI.ServiceProvider);
         discordSocketClient.MessageReceived += HandleMessageAsync;
 
@@ -67,6 +69,7 @@ public class DiscordService : Service, IDiscordService
 
         while (!ready)
             await Task.Delay(500);
+        Serilog.Log.Debug("DiscordSocketClient is up");
 
         SynchronizeConfigs();
     }
@@ -84,15 +87,14 @@ public class DiscordService : Service, IDiscordService
 
         if (obsoleteAmount > 0)
         {
-            //TODO: Proper logging
-            Console.WriteLine($"Found {obsoleteAmount} obsolete guild {(obsoleteAmount > 1 ? "configs" : "config")}. Cleaning up.");
+            Serilog.Log.Information("Found {obsoleteAmount} obsolete guild {configOrConfigs}. Cleaning up.", obsoleteAmount, obsoleteAmount > 1 ? "configs" : "config");
             foreach (string guildId in obsoleteLoadedGuildIds)
                 configService.Delete(guildId);
         }
 
         if (newAmount > 0)
         {
-            Console.WriteLine($"Found {newAmount} new {(newAmount > 1 ? "guilds" : "guild")}. Creating {(newAmount > 1 ? "configs" : "config")}.");
+            Serilog.Log.Information("Found {newAmount} new {guildOrGuilds}. Creating {configOrConfigs}.", newAmount, newAmount > 1 ? "guilds" : "guild", newAmount > 1 ? "configs" : "config");
             foreach (string guildId in newGuildIds)
                 configService.Load(guildId);
         }
@@ -106,13 +108,12 @@ public class DiscordService : Service, IDiscordService
 
     private async Task OnGuildJoinCreateConfig(SocketGuild socketGuild)
     {
-        //TODO: Proper logging
-        Console.WriteLine($"Joined Guild {socketGuild.Id}. Creating config.");
+        Serilog.Log.Information("Joined Guild {guild}. Creating config.", socketGuild.Id);
         await configService.LoadAsync(Convert.ToString(socketGuild.Id));
     }
     private Task OnGuildLeftDeleteConfig(SocketGuild socketGuild)
     {
-        Console.WriteLine($"Left Guild {socketGuild.Id}. Deleting config.");
+        Serilog.Log.Information("Left Guild {guild}. Deleting config.", socketGuild.Id);
         configService.Delete(Convert.ToString(socketGuild.Id));
         return Task.CompletedTask;
     }

@@ -15,6 +15,8 @@ public class HealthService : Service, IHealthService
         T? service = ServiceRegistry.Get<T>();
         if (service is not null && service is Service s)
             return s.Status;
+
+        Serilog.Log.Error("Status for Service {service} was requested but ServiceRegistry returned null for {service}", typeof(T).Name);
         return null;
     }
 

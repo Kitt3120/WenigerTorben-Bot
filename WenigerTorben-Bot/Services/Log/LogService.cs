@@ -20,10 +20,14 @@ public class LogService : Service, ILogService, IDisposable
     protected override void Initialize()
     {
         string loggingDirectory = fileService.GetAndCreateDirectory("Logs");
-        string logfilePath = Path.Combine(loggingDirectory, $"{DateTime.Now:yyyy-MM-dd-mm-ss}.log");
+        string logfile = $"{DateTime.Now:yyyy-MM-dd-mm-ss}.log";
+        string logfilePath = Path.Combine(loggingDirectory, logfile);
 
         if (Serilog.Log.Logger is not null)
+        {
+            Serilog.Log.Debug("Disposing throwaway logger");
             Serilog.Log.CloseAndFlush();
+        }
 
         Serilog.Log.Logger = new LoggerConfiguration()
                                 .MinimumLevel.Debug()
@@ -32,10 +36,14 @@ public class LogService : Service, ILogService, IDisposable
                                 .CreateLogger();
 
         Serilog.Log.Information("Logger initialized");
-        Serilog.Log.Debug("Logging directory is {loggingDirectory}", loggingDirectory);
+        Serilog.Log.Debug("Logging directory is {directory} and logging into file {file}", loggingDirectory, logfile);
     }
 
-    public void Dispose() => Serilog.Log.CloseAndFlush();
+    public void Dispose()
+    {
+        Serilog.Log.Debug("Disposing logger");
+        Serilog.Log.CloseAndFlush();
+    }
 
     protected override ServiceConfiguration CreateServiceConfiguration() => new ServiceConfigurationBuilder().Build();
 

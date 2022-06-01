@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
+using Serilog;
 
 namespace WenigerTorbenBot.Storage.Config;
 
@@ -59,53 +60,55 @@ public class Config : IConfig
 
     public void Remove(string key) => properties.Remove(key);
 
-    //TODO: Null-Check
     public void Load()
     {
         if (!File.Exists(filepath))
         {
-            //TODO: Proper logging
-            Console.WriteLine($"Error while loading config: File {filepath} does not exist. Creating empty config.");
+            Log.Debug("No config found at {filepath}, using empty config", filepath);
             return;
         }
 
-        Dictionary<string, object>? deserialized = JsonConvert.DeserializeObject<Dictionary<string, object>>(File.ReadAllText(filepath));
-        if (deserialized is null)
+        try
         {
-            //TODO: Proper logging and better error handling
-            Console.WriteLine($"Error while loading config {filepath}: Deserialized object is null.");
-            return;
+            Dictionary<string, object>? deserialized = JsonConvert.DeserializeObject<Dictionary<string, object>>(File.ReadAllText(filepath));
+            if (deserialized is null)
+                throw new Exception("Deserialized config was null"); //TODO: Proper exception
+            properties = deserialized;
         }
-
-        properties = deserialized;
+        catch (Exception e)
+        {
+            Log.Error(e, "Error loading config");
+        }
     }
 
     public async Task LoadAsync()
     {
         if (!File.Exists(filepath))
         {
-            //TODO: Proper logging
-            Console.WriteLine($"Error while loading config: File {filepath} does not exist. Creating empty config.");
+            Log.Debug("No config found at {filepath}, using empty config", filepath);
             return;
         }
 
-        Dictionary<string, object>? deserialized = JsonConvert.DeserializeObject<Dictionary<string, object>>(await File.ReadAllTextAsync(filepath));
-        if (deserialized is null)
+        try
         {
-            //TODO: Proper logging and better error handling
-            Console.WriteLine($"Error while loading config {filepath}: Deserialized object is null.");
-            return;
+            Dictionary<string, object>? deserialized = JsonConvert.DeserializeObject<Dictionary<string, object>>(await File.ReadAllTextAsync(filepath));
+            if (deserialized is null)
+                throw new Exception("Deserialized config was null"); //TODO: Proper exception
+            properties = deserialized;
         }
-
-        properties = deserialized;
+        catch (Exception e)
+        {
+            Log.Error(e, "Error loading config");
+        }
     }
 
     public void Save() => File.WriteAllText(filepath, JsonConvert.SerializeObject(properties, Formatting.Indented));
 
-    public async Task SaveAsync() => await System.IO.File.WriteAllTextAsync(filepath, JsonConvert.SerializeObject(properties, Formatting.Indented));
+    public async Task SaveAsync() => await File.WriteAllTextAsync(filepath, JsonConvert.SerializeObject(properties, Formatting.Indented));
 
     public void Delete()
     {
+        Log.Debug("Deleting config {filepath}", filepath);
         properties.Clear();
         File.Delete(filepath);
     }

@@ -24,8 +24,12 @@ public abstract class Service : IService
     public void Start()
     {
         if (Status != ServiceStatus.Stopped)
+        {
+            Serilog.Log.Warning("Service {service} tried to start multiple times", Name);
             return;
+        }
 
+        Serilog.Log.Debug("Initializing service {service}", Name);
         try
         {
             if (ServiceConfiguration.UsesAsyncInitialization)
@@ -38,13 +42,13 @@ public abstract class Service : IService
         {
             Status = ServiceStatus.Failed;
             InitializationException = e;
-            //TODO: Proper logging
-            Console.WriteLine($"Failed to initialize service {Name}: {e.Message}");
+            Serilog.Log.Error(e, "Failed to initialize service {service}", Name);
         }
     }
 
     public async Task Stop()
     {
+        Serilog.Log.Debug("Stopping service {service}", Name);
         if (this is IAsyncDisposable asyncDisposable)
         {
             try
@@ -55,8 +59,7 @@ public abstract class Service : IService
             {
                 Status = ServiceStatus.Failed;
                 DisposalException = e;
-                //TODO: Proper logging
-                Console.WriteLine($"Failed to dispose service {Name}: {e.Message}");
+                Serilog.Log.Error(e, "Failed to dispose service {service}", Name);
                 return;
             }
         }
@@ -70,8 +73,7 @@ public abstract class Service : IService
             {
                 Status = ServiceStatus.Failed;
                 DisposalException = e;
-                //TODO: Proper logging
-                Console.WriteLine($"Failed to dispose service {Name}: {e.Message}");
+                Serilog.Log.Error(e, "Failed to dispose service {service}", Name);
                 return;
             }
         }

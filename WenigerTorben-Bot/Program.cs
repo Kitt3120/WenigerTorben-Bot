@@ -40,7 +40,7 @@ public class Program
         PrintLicense();
         Console.WriteLine("\n");
 
-        //Simple throwaway logger to use before LogService initialized the real logger
+        //Simple throwaway console-only logger to use before LogService initialized the real logger
         Log.Logger = new LoggerConfiguration().WriteTo.Console().CreateLogger();
 
         if (!PlatformUtils.IsOSPlatformSupported())
@@ -78,6 +78,7 @@ public class Program
 
         if (setupService.IsSetupNeeded())
         {
+            Log.Information("Your config is missing some important settings. Entering setup...");
             setupService.BeginSetup();
             inputHandler.ControlThread(condition: setupService.IsSetupRunning);
             Log.Information("Please restart the application");
@@ -103,7 +104,6 @@ public class Program
         IInputHandler? inputHandler = DI.ServiceProvider.GetService<IInputHandler>();
         if (inputHandler is null)
         {
-            //TODO: Proper logging
             Log.Error("Service Provider returned null for IInputHandler while shutting down");
             Environment.Exit(1);
         }

@@ -1,5 +1,6 @@
 using System;
 using Microsoft.Extensions.DependencyInjection;
+using Serilog;
 using WenigerTorbenBot.CLI;
 using WenigerTorbenBot.Services.Config;
 using WenigerTorbenBot.Services.Discord;
@@ -16,6 +17,8 @@ public class DI
 
     public static void Init()
     {
+        Log.Debug("Initializing ServiceProvider");
+
         /*
         Services have to be instantiated manually instead of by the ServiceProvider
         because it only instantiates the Services on demand, not initially.
