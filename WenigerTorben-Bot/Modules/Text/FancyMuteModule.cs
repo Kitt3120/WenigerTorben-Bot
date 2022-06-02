@@ -20,7 +20,7 @@ public class FancyMuteModule : ModuleBase<SocketCommandContext>
     [Command("fancymute")]
     [Alias(new string[] { "fm", "fancym", "fmute" })]
     [Summary("Mutes, unmutes or toggles mute of a user")]
-    public async Task FancyMuteCommand([Summary("The operation to perform (Mute, unmute or toggle)")] string operation, [Summary("The user to perform action for")] IUser user)
+    public async Task FancyMuteCommand([Summary("The operation to perform (Mute, unmute or toggle)")] string operation, [Summary("The user to perform action for")] IUser? user = null)
     {
         switch (operation.ToLower())
         {
@@ -34,7 +34,7 @@ public class FancyMuteModule : ModuleBase<SocketCommandContext>
                 await ToggleMuteCommand(user);
                 break;
             default:
-                await ReplyAsync($"Unknown operation: {operation}. Valid operations are mute, unmute and toggle.");
+                await ReplyAsync($"Unknown operation: {operation}. Valid operations are mute, unmute and toggle");
                 break;
         }
     }
@@ -42,11 +42,17 @@ public class FancyMuteModule : ModuleBase<SocketCommandContext>
     [Command("mute")]
     [Alias(new string[] { "weniger" })]
     [Summary("Mutes a user")]
-    public async Task MuteCommand([Summary("The user to mute")] IUser user)
+    public async Task MuteCommand([Summary("The user to mute")] IUser? user = null)
     {
         if (Context.Guild is null)
         {
-            await ReplyAsync("This command is only available on servers.");
+            await ReplyAsync("This command is only available on servers");
+            return;
+        }
+
+        if (user is null)
+        {
+            await ReplyAsync("You have to provide a user to mute");
             return;
         }
 
@@ -66,11 +72,17 @@ public class FancyMuteModule : ModuleBase<SocketCommandContext>
 
     [Command("unmute")]
     [Summary("Unmutes a user")]
-    public async Task UnmuteCommand([Summary("The user to unmute")] IUser user)
+    public async Task UnmuteCommand([Summary("The user to unmute")] IUser? user = null)
     {
         if (Context.Guild is null)
         {
-            await ReplyAsync("This command is only available on servers.");
+            await ReplyAsync("This command is only available on servers");
+            return;
+        }
+
+        if (user is null)
+        {
+            await ReplyAsync("You have to provide a user to unmute");
             return;
         }
 
@@ -86,17 +98,23 @@ public class FancyMuteModule : ModuleBase<SocketCommandContext>
 
     [Command("togglemute")]
     [Summary("Toggles mute of a user")]
-    public async Task ToggleMuteCommand([Summary("The user to toggle mute for")] IUser user)
+    public async Task ToggleMuteCommand([Summary("The user to toggle mute for")] IUser? user = null)
     {
         if (Context.Guild is null)
         {
-            await ReplyAsync("This command is only available on servers.");
+            await ReplyAsync("This command is only available on servers");
+            return;
+        }
+
+        if (user is null)
+        {
+            await ReplyAsync("You have to provide a user to toggle mute for");
             return;
         }
 
         if (user.IsBot)
         {
-            await ReplyAsync("Sorry, you can't toggle mute status of bots");
+            await ReplyAsync("Sorry, you can't toggle mute for bots");
             return;
         }
 
