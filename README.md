@@ -9,4 +9,4 @@ Ein Überblick über den derzeitigen Status gibt es [hier zu sehen](https://gith
 # Mitwirken
 Der WenigerTorben-Bot ist ein Open-Source Projekt.
 Du möchtest mitwirken?
-Suche dir ein [Issue](https://github.com/Kitt3120/WenigerTorben-Bot/issues) heraus, erstelle einen Pull Request und los gehts!
+Suche dir ein [Issue](https://github.com/Kitt3120/WenigerTorben-Bot/issues) heraus, erstelle eine Branch und los gehts!
