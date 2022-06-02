@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using WenigerTorbenBot.Services.File;
+using WenigerTorbenBot.Storage;
 using WenigerTorbenBot.Storage.Config;
 using WenigerTorbenBot.Utils;
 
@@ -16,11 +17,12 @@ public class ConfigService : Service, IConfigService, IAsyncDisposable
 
     private readonly IFileService fileService;
 
-    private Dictionary<string, IConfig> configs = new Dictionary<string, IConfig>();
+    private Dictionary<string, IAsyncStorage<object>> configs;
 
     public ConfigService(IFileService fileService) : base()
     {
         this.fileService = fileService;
+        this.configs = new Dictionary<string, IAsyncStorage<object>>();
     }
 
     protected override async Task InitializeAsync()
@@ -45,10 +47,14 @@ public class ConfigService : Service, IConfigService, IAsyncDisposable
 
     public IEnumerable<string> GetGuildIds() => configs.Keys.Where(key => key != "global");
 
-    public bool Exists(string guildId = "global") => configs.ContainsKey(guildId);
+    public bool Exists(string guildId = "global") => configs.ContainsKey(guildId) && configs[guildId] is not null;
 
-    public IConfig Get(string guildId = "global") => configs[guildId];
-
+    public IAsyncStorage<object>? Get(string guildId = "global")
+    {
+        if (Exists(guildId))
+            return configs[guildId];
+        else return null;
+    }
     public void Delete(string guildId)
     {
         configs[guildId].Delete();
@@ -57,60 +63,40 @@ public class ConfigService : Service, IConfigService, IAsyncDisposable
 
     public void Load(string guildId = "global")
     {
-        if (Exists(guildId))
-        {
-            Serilog.Log.Error("Error while loading config {guildId}: Config already loaded.", guildId);
-            return;
-        }
-
-        IConfig config = new Storage.Config.Config(GetConfigFilePath(guildId));
+        IAsyncStorage<object> config = new ConfigStorage<object>(GetConfigFilePath(guildId));
         config.Load();
         configs[guildId] = config;
     }
 
     public async Task LoadAsync(string guildId = "global")
     {
-
-        if (Exists(guildId))
-        {
-            Serilog.Log.Error("Error while loading config {guildId}: Config already loaded.", guildId);
-            return;
-        }
-
-        IConfig config = new Storage.Config.Config(GetConfigFilePath(guildId));
+        IAsyncStorage<object> config = new ConfigStorage<object>(GetConfigFilePath(guildId));
         await config.LoadAsync();
         configs[guildId] = config;
     }
 
     public void LoadAll()
     {
-        foreach (string configPath in Directory.GetFiles(GetConfigsDirectory()))
-        {
-            string guildId = Path.GetFileNameWithoutExtension(configPath);
-            IConfig config = new Storage.Config.Config(GetConfigFilePath(guildId));
-            config.Load();
-            configs[guildId] = config;
-        }
+        foreach (string guildId in Directory.GetFiles(GetConfigsDirectory()).Select(configPath => Path.GetFileNameWithoutExtension(configPath)))
+            Load(guildId);
     }
 
-    public async Task LoadAllAsync()
+    public async Task LoadAllAsync() => await Task.WhenAll(Directory.GetFiles(GetConfigsDirectory()).Select(configPath => Path.GetFileNameWithoutExtension(configPath)).Select(guildId => LoadAsync(guildId)));
+
+    public void Save(string guildId = "global") => Get(guildId)?.Save();
+
+    public async Task SaveAsync(string guildId = "global")
     {
-        foreach (string configPath in Directory.GetFiles(GetConfigsDirectory()))
-        {
-            string guildId = Path.GetFileNameWithoutExtension(configPath);
-            IConfig config = new Storage.Config.Config(GetConfigFilePath(guildId));
-            await config.LoadAsync();
-            configs[guildId] = config;
-        }
+        // => await Get(guildId)?.SaveAsync(); gives warning here
+        IAsyncStorage<object>? config = Get(guildId);
+        if (config is not null)
+            await config.SaveAsync();
+
+        //TODO: Log when trying to save config that does not exist
     }
-
-    public void Save(string guildId = "global") => configs[guildId].Save();
-
-    public async Task SaveAsync(string guildId = "global") => await configs[guildId].SaveAsync();
-
     public void SaveAll()
     {
-        foreach (IConfig config in configs.Values)
+        foreach (IAsyncStorage<object> config in configs.Values)
             config.Save();
     }
 

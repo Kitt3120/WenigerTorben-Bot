@@ -9,6 +9,7 @@ using Discord;
 using Discord.Commands;
 using Discord.WebSocket;
 using WenigerTorbenBot.Services.Config;
+using WenigerTorbenBot.Storage;
 using WenigerTorbenBot.Storage.Config;
 
 namespace WenigerTorbenBot.Services.Discord;
@@ -24,7 +25,7 @@ public class DiscordService : Service, IDiscordService
     private readonly DiscordSocketClient discordSocketClient;
     private readonly CommandService commandService;
 
-    private IConfig? config;
+    private IAsyncStorage<object>? storage;
 
     public DiscordService(IConfigService configService) : base()
     {
@@ -49,12 +50,14 @@ public class DiscordService : Service, IDiscordService
 
     protected override async Task InitializeAsync()
     {
-        config = configService.Get();
+        storage = configService.Get();
+        if (storage is null)
+            throw new Exception("Global config was null");
 
-        if (!config.Exists("discord.token"))
+        string? token = storage.Get<string>("discord.token");
+        if (token is null)
             throw new Exception("Config is missing option discord.token"); //TODO: Proper exception
 
-        string token = config.Get<string>("discord.token");
 
         Serilog.Log.Debug("Waiting for DiscordSocketClient to finish");
         await commandService.AddModulesAsync(Assembly.GetEntryAssembly(), DI.ServiceProvider);

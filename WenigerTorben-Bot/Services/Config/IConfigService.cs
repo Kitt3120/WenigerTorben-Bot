@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using WenigerTorbenBot.Storage;
 using WenigerTorbenBot.Storage.Config;
 
 namespace WenigerTorbenBot.Services.Config;
@@ -14,7 +15,7 @@ public interface IConfigService : IService
 
     public bool Exists(string guildId = "global");
 
-    public IConfig Get(string guildId = "global");
+    public IAsyncStorage<object>? Get(string guildId = "global");
 
     public void Delete(string guildId);
 
