@@ -12,6 +12,8 @@ public class ReactionUtils
 {
     public static string[] FromString(string str, StatefulReactionProvider? statefulReactionProvider = null)
     {
+        Log.Debug("Resolving pattern {pattern}", str);
+
         if (statefulReactionProvider is null)
             statefulReactionProvider = defaultStatefulReactionProviderBuilder.Build();
 
@@ -34,7 +36,7 @@ public class ReactionUtils
                     reactionStrings.Add(statefulReactionProvider.Consume(foundPattern));
 
                     int pos = toAnalyze.IndexOf(foundPattern);
-                    toAnalyze = string.Concat(toAnalyze.AsSpan(0, pos), string.Empty, toAnalyze.AsSpan(pos + foundPattern.Length));
+                    toAnalyze = string.Concat(toAnalyze.AsSpan(0, pos), toAnalyze.AsSpan(pos + foundPattern.Length));
                     pattern = string.Empty;
                     break;
                 }
@@ -58,7 +60,7 @@ public class ReactionUtils
                     reactionStrings.Add(statefulReactionProvider.Consume(foundPattern));
 
                     int pos = toAnalyze.IndexOf(foundPattern);
-                    toAnalyze = string.Concat(toAnalyze.AsSpan(0, pos), string.Empty, toAnalyze.AsSpan(pos + foundPattern.Length));
+                    toAnalyze = string.Concat(toAnalyze.AsSpan(0, pos), toAnalyze.AsSpan(pos + foundPattern.Length));
                     pattern = string.Empty;
                     break;
                 }
@@ -82,7 +84,7 @@ public class ReactionUtils
                 reactionStrings.Add(statefulReactionProvider.Consume(foundPattern));
 
                 int pos = toAnalyze.IndexOf(foundPattern);
-                toAnalyze = string.Concat(toAnalyze.AsSpan(0, pos), string.Empty, toAnalyze.AsSpan(pos + foundPattern.Length));
+                toAnalyze = string.Concat(toAnalyze.AsSpan(0, pos), toAnalyze.AsSpan(pos + foundPattern.Length));
                 pattern = string.Empty;
             }
         }

@@ -22,12 +22,6 @@ public class FancyMuteModule : ModuleBase<SocketCommandContext>
     [Summary("Mutes, unmutes or toggles mute of a user")]
     public async Task FancyMuteCommand(string operation, IUser user)
     {
-        if (Context.Guild is null)
-        {
-            await ReplyAsync("This command is only available on servers.");
-            return;
-        }
-
         switch (operation.ToLower())
         {
             case "mute":
@@ -56,6 +50,12 @@ public class FancyMuteModule : ModuleBase<SocketCommandContext>
             return;
         }
 
+        if (user.IsBot)
+        {
+            await ReplyAsync("Sorry, you can't mute bots");
+            return;
+        }
+
         await ReplyAsync("User muted");
         Task.Run(async () =>
         {
@@ -74,12 +74,14 @@ public class FancyMuteModule : ModuleBase<SocketCommandContext>
             return;
         }
 
-        await ReplyAsync("User unmuted");
-        Task.Run(async () =>
+        if (user.IsBot)
         {
-            await Task.Delay(1000);
-            fancyMuteService.Unmute(Context.Guild, user);
-        });
+            await ReplyAsync("Sorry, you can't unmute bots");
+            return;
+        }
+
+        fancyMuteService.Unmute(Context.Guild, user);
+        await ReplyAsync("User unmuted");
     }
 
     [Command("togglemute")]
@@ -92,13 +94,24 @@ public class FancyMuteModule : ModuleBase<SocketCommandContext>
             return;
         }
 
-        bool muted = fancyMuteService.IsMuted(Context.Guild, user);
-        await ReplyAsync(muted ? "User muted" : "User unmuted");
-        Task.Run(async () =>
+        if (user.IsBot)
         {
-            await Task.Delay(1000);
+            await ReplyAsync("Sorry, you can't toggle mute status of bots");
+            return;
+        }
+
+        bool muted = fancyMuteService.IsMuted(Context.Guild, user);
+
+        if (muted)
             fancyMuteService.Toggle(Context.Guild, user);
-        });
+        else
+            Task.Run(async () =>
+            {
+                await Task.Delay(1000);
+                fancyMuteService.Toggle(Context.Guild, user);
+            });
+
+        await ReplyAsync(muted ? "User muted" : "User unmuted");
     }
 
 }
