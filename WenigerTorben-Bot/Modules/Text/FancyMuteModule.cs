@@ -20,7 +20,7 @@ public class FancyMuteModule : ModuleBase<SocketCommandContext>
     [Command("fancymute")]
     [Alias(new string[] { "fm", "fancym", "fmute" })]
     [Summary("Mutes, unmutes or toggles mute of a user")]
-    public async Task FancyMuteCommand(string operation, IUser user)
+    public async Task FancyMuteCommand([Summary("The operation to perform (Mute, unmute or toggle)")] string operation, [Summary("The user to perform action for")] IUser user)
     {
         switch (operation.ToLower())
         {
@@ -42,7 +42,7 @@ public class FancyMuteModule : ModuleBase<SocketCommandContext>
     [Command("mute")]
     [Alias(new string[] { "weniger" })]
     [Summary("Mutes a user")]
-    public async Task MuteCommand(IUser user)
+    public async Task MuteCommand([Summary("The user to mute")] IUser user)
     {
         if (Context.Guild is null)
         {
@@ -66,7 +66,7 @@ public class FancyMuteModule : ModuleBase<SocketCommandContext>
 
     [Command("unmute")]
     [Summary("Unmutes a user")]
-    public async Task UnmuteCommand(IUser user)
+    public async Task UnmuteCommand([Summary("The user to unmute")] IUser user)
     {
         if (Context.Guild is null)
         {
@@ -86,7 +86,7 @@ public class FancyMuteModule : ModuleBase<SocketCommandContext>
 
     [Command("togglemute")]
     [Summary("Toggles mute of a user")]
-    public async Task ToggleMuteCommand(IUser user)
+    public async Task ToggleMuteCommand([Summary("The user to toggle mute for")] IUser user)
     {
         if (Context.Guild is null)
         {
