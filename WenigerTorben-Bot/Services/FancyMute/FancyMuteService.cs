@@ -31,7 +31,7 @@ public class FancyMuteService : Service, IFancyMuteService
         this.discordService = discordService;
         this.mutedUsersLock = new object();
         this.mutedUsers = new Dictionary<IGuild, List<IUser>>();
-        this.reactionMessages = new string[] { "no", "nope", "cya", "ciao", "bye", "gone", "muted", "ok thx", "X" };
+        this.reactionMessages = new string[] { "no", "nope", "cya", "ciao", "bye", "gone", "muted", "quiet", "ok thx", "ok nice", "ok cool", "X" };
         this.random = new Random();
     }
 
@@ -94,7 +94,7 @@ public class FancyMuteService : Service, IFancyMuteService
 
     public async Task OnMessageReceived(SocketMessage socketMessage)
     {
-        if (socketMessage.Channel is not SocketGuildChannel)
+        if (socketMessage.Channel is not SocketGuildChannel socketGuildChannel || !IsMuted(socketGuildChannel.Guild, socketMessage.Author))
             return;
 
         string reactionMessage = reactionMessages[random.Next(reactionMessages.Length)];
@@ -112,7 +112,7 @@ public class FancyMuteService : Service, IFancyMuteService
         foreach (string reaction in reactions)
             await socketMessage.AddReactionAsync(Emoji.Parse(reaction));
 
-        await Task.Delay(1500);
+        await Task.Delay(1000);
         await socketMessage.DeleteAsync();
     }
 

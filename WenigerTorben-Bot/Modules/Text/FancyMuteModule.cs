@@ -1,3 +1,4 @@
+using System.Linq;
 using System.Threading.Tasks;
 using Discord;
 using Discord.Commands;
@@ -7,20 +8,26 @@ namespace WenigerTorbenBot.Modules.Text;
 
 [Name("FancyMute")]
 [Summary("Module to mute users, but in a cooler way.")]
-public class FancyMute : ModuleBase<SocketCommandContext>
+public class FancyMuteModule : ModuleBase<SocketCommandContext>
 {
     private readonly IFancyMuteService fancyMuteService;
 
-    public FancyMute(IFancyMuteService fancyMuteService)
+    public FancyMuteModule(IFancyMuteService fancyMuteService)
     {
         this.fancyMuteService = fancyMuteService;
     }
 
-    [Name("FancyMute")]
+    [Command("fancymute")]
+    [Alias(new string[] { "fm", "fancym", "fmute" })]
     [Summary("Mutes, unmutes or toggles mute of a user")]
-    [Alias(new string[] { "fm", "" })]
     public async Task FancyMuteCommand(string operation, IUser user)
     {
+        if (Context.Guild is null)
+        {
+            await ReplyAsync("This command is only available on servers.");
+            return;
+        }
+
         switch (operation.ToLower())
         {
             case "mute":
@@ -38,28 +45,59 @@ public class FancyMute : ModuleBase<SocketCommandContext>
         }
     }
 
-    [Name("Mute")]
+    [Command("mute")]
     [Summary("Mutes a user")]
     public async Task MuteCommand(IUser user)
     {
-        fancyMuteService.Mute(Context.Guild, user);
+        if (Context.Guild is null)
+        {
+            await ReplyAsync("This command is only available on servers.");
+            return;
+        }
+
         await ReplyAsync("User muted");
+        Task.Run(async () =>
+        {
+            await Task.Delay(1000);
+            fancyMuteService.Mute(Context.Guild, user);
+        });
     }
 
-    [Name("Unmute")]
+    [Command("unmute")]
     [Summary("Unmutes a user")]
     public async Task UnmuteCommand(IUser user)
     {
-        fancyMuteService.Mute(Context.Guild, user);
+        if (Context.Guild is null)
+        {
+            await ReplyAsync("This command is only available on servers.");
+            return;
+        }
+
         await ReplyAsync("User unmuted");
+        Task.Run(async () =>
+        {
+            await Task.Delay(1000);
+            fancyMuteService.Unmute(Context.Guild, user);
+        });
     }
 
-    [Name("ToggleMute")]
+    [Command("togglemute")]
     [Summary("Toggles mute of a user")]
     public async Task ToggleMuteCommand(IUser user)
     {
-        bool muted = fancyMuteService.Toggle(Context.Guild, user);
+        if (Context.Guild is null)
+        {
+            await ReplyAsync("This command is only available on servers.");
+            return;
+        }
+
+        bool muted = fancyMuteService.IsMuted(Context.Guild, user);
         await ReplyAsync(muted ? "User muted" : "User unmuted");
+        Task.Run(async () =>
+        {
+            await Task.Delay(1000);
+            fancyMuteService.Toggle(Context.Guild, user);
+        });
     }
 
 }

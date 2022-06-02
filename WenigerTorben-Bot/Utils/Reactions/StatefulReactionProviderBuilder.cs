@@ -31,6 +31,16 @@ public class StatefulReactionProviderBuilder
         return this;
     }
 
-    public StatefulReactionProvider Build() => new StatefulReactionProvider(source);
+    public StatefulReactionProvider Build()
+    {
+        Dictionary<string, IList<string>> copyOfSource = new Dictionary<string, IList<string>>();
+        foreach (string key in source.Keys)
+        {
+            copyOfSource[key] = new List<string>();
+            foreach (string pattern in source[key])
+                copyOfSource[key].Add(pattern);
+        }
 
+        return new StatefulReactionProvider(copyOfSource);
+    }
 }

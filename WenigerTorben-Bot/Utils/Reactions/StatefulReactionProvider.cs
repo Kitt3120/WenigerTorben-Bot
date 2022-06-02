@@ -1,6 +1,9 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
+using System.Collections.Specialized;
 using System.Linq;
+using Microsoft.VisualBasic;
 
 namespace WenigerTorbenBot.Utils.Reactions;
 
@@ -17,16 +20,15 @@ public class StatefulReactionProvider
 
     public string Consume(string pattern)
     {
-
         if (!source.ContainsKey(pattern))
-            throw new ArgumentException($"No reactions registered for given pattern {pattern}");
-
-        if (source[pattern].Count == 0)
-            throw new ArgumentException($"No reactions left to consume for given pattern {pattern}");
+            throw new ArgumentException($"No reactions available for given pattern {pattern}");
 
         IList<string> reactions = source[pattern];
         string reaction = reactions.First();
         reactions.RemoveAt(0);
+
+        if (reactions.Count == 0)
+            source.Remove(pattern);
 
         return reaction;
     }
