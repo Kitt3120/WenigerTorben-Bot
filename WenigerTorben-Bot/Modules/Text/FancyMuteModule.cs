@@ -46,6 +46,7 @@ public class FancyMuteModule : ModuleBase<SocketCommandContext>
     }
 
     [Command("mute")]
+    [Alias(new string[] { "weniger" })]
     [Summary("Mutes a user")]
     public async Task MuteCommand(IUser user)
     {

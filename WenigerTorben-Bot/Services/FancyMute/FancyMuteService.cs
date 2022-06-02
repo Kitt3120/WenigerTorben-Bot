@@ -74,7 +74,7 @@ public class FancyMuteService : Service, IFancyMuteService
 
             List<IUser> mutedList = mutedUsers[guild];
 
-            if (!mutedList.Contains(user))
+            if (mutedList.Contains(user))
                 mutedList.Remove(user);
 
             if (mutedList.Count == 0)
