@@ -144,9 +144,7 @@ public class DiscordService : Service, IDiscordService
 
     public async Task<IReadOnlyCollection<IApplicationCommand>> BulkOverwriteGlobalApplicationCommand(ApplicationCommandProperties[] properties, RequestOptions options = null) => await discordSocketClient.BulkOverwriteGlobalApplicationCommandsAsync(properties, options);
 
-
     public async Task<IApplicationCommand> CreateGlobalApplicationCommand(ApplicationCommandProperties properties, RequestOptions options = null) => await discordSocketClient.CreateGlobalApplicationCommandAsync(properties, options);
-
 
     public async Task<IGuild> CreateGuildAsync(string name, IVoiceRegion region, Stream jpegIcon = null, RequestOptions options = null) => await discordSocketClient.CreateGuildAsync(name, region, jpegIcon, options);
 
@@ -174,9 +172,7 @@ public class DiscordService : Service, IDiscordService
 
     public async Task<IReadOnlyCollection<IGuild>> GetGuildsAsync(CacheMode mode = CacheMode.AllowDownload, RequestOptions options = null) => await Task.Run<IReadOnlyCollection<IGuild>>(() => discordSocketClient.Guilds);
 
-
     public async Task<IInvite> GetInviteAsync(string inviteId, RequestOptions options = null) => await discordSocketClient.GetInviteAsync(inviteId, options);
-
 
     public async Task<IReadOnlyCollection<IPrivateChannel>> GetPrivateChannelsAsync(CacheMode mode = CacheMode.AllowDownload, RequestOptions options = null) => await Task.Run<IReadOnlyCollection<IPrivateChannel>>(() => discordSocketClient.PrivateChannels);
 
@@ -199,4 +195,6 @@ public class DiscordService : Service, IDiscordService
     protected override ServiceConfiguration CreateServiceConfiguration() => new ServiceConfigurationBuilder().SetUsesAsyncInitialization(true).Build();
 
     public CommandService GetCommandService() => commandService;
+
+    public IDiscordClient GetWrappedClient() => discordSocketClient;
 }
