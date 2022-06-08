@@ -74,7 +74,7 @@ public abstract class Storage<T> : IStorage<T>
     {
         if (!File.Exists(filepath))
         {
-            Log.Debug("No config found at {filepath}, skipped Load()", filepath);
+            Log.Debug("No storage found at {filepath}, skipped Load()", filepath);
             return;
         }
 

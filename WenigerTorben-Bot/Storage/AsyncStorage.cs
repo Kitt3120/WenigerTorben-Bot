@@ -15,7 +15,7 @@ public abstract class AsyncStorage<T> : Storage<T>, IAsyncStorage<T>
     {
         if (!File.Exists(filepath))
         {
-            Log.Debug("No config found at {filepath}, skipped LoadAsync()", filepath);
+            Log.Debug("No storage found at {filepath}, skipped LoadAsync()", filepath);
             return;
         }
 

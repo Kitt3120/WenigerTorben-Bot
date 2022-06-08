@@ -8,7 +8,6 @@ using System.Threading.Tasks;
 using Discord;
 using Discord.Commands;
 using Discord.WebSocket;
-using WenigerTorbenBot.Services.Config;
 using WenigerTorbenBot.Storage;
 using WenigerTorbenBot.Storage.Config;
 
@@ -79,7 +78,7 @@ public class DiscordService : Service, IDiscordService
 
     private void SynchronizeConfigs()
     {
-        IEnumerable<string> loadedGuildIds = configService.GetGuildIds();
+        IEnumerable<string> loadedGuildIds = configService.GetIdentifiers().Where(identifier => identifier.Length == 18).Where(identifier => identifier.ToCharArray().All(c => Char.IsDigit(c)));
         IEnumerable<string> actualGuildIds = discordSocketClient.Guilds.Select(guild => Convert.ToString(guild.Id));
 
         IEnumerable<string> obsoleteLoadedGuildIds = loadedGuildIds.Where(guildId => !actualGuildIds.Contains(guildId));

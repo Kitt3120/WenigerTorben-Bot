@@ -1,9 +1,6 @@
 using System;
-using System.Collections;
-using System.IO;
 using System.Linq;
 using WenigerTorbenBot.CLI;
-using WenigerTorbenBot.Services.Config;
 using WenigerTorbenBot.Services.Discord;
 using WenigerTorbenBot.Storage;
 using WenigerTorbenBot.Storage.Config;

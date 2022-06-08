@@ -7,9 +7,9 @@ public abstract class Service : IService
 {
     public abstract string Name { get; }
     public abstract ServicePriority Priority { get; }
-    public ServiceStatus Status { get; protected set; }
-    public Exception? InitializationException { get; protected set; }
-    public Exception? DisposalException { get; protected set; }
+    public ServiceStatus Status { get; private set; }
+    public Exception? InitializationException { get; private set; }
+    public Exception? DisposalException { get; private set; }
     public ServiceConfiguration ServiceConfiguration { get; private set; }
 
     public Service()
