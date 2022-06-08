@@ -1,10 +1,8 @@
 using System;
-using System.Collections;
-using System.IO;
 using System.Linq;
 using WenigerTorbenBot.CLI;
-using WenigerTorbenBot.Services.Config;
 using WenigerTorbenBot.Services.Discord;
+using WenigerTorbenBot.Storage;
 using WenigerTorbenBot.Storage.Config;
 
 namespace WenigerTorbenBot.Services.Setup;
@@ -18,7 +16,7 @@ public class SetupService : Service, ISetupService
     private readonly IConfigService configService;
     private readonly IDiscordService discordService;
 
-    private IConfig? config;
+    private IAsyncStorage<object>? config;
     private readonly string[] neededKeys;
     private int id;
     private int state;
@@ -41,7 +39,7 @@ public class SetupService : Service, ISetupService
     {
         config = configService.Get();
         if (config is null)
-            throw new Exception("Config was null"); //TODO: Proper exception
+            throw new Exception("Global config was null"); //TODO: Proper exception
     }
 
     public bool IsSetupNeeded() => neededKeys.Any(key => !config.Exists(key));

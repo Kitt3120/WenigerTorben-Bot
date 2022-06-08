@@ -2,13 +2,15 @@ using System;
 using Microsoft.Extensions.DependencyInjection;
 using Serilog;
 using WenigerTorbenBot.CLI;
-using WenigerTorbenBot.Services.Config;
 using WenigerTorbenBot.Services.Discord;
 using WenigerTorbenBot.Services.FancyMute;
 using WenigerTorbenBot.Services.File;
 using WenigerTorbenBot.Services.Health;
 using WenigerTorbenBot.Services.Log;
 using WenigerTorbenBot.Services.Setup;
+using WenigerTorbenBot.Services.Storage.Config;
+using WenigerTorbenBot.Services.Storage.Persistent;
+using WenigerTorbenBot.Storage.Config;
 
 namespace WenigerTorbenBot;
 
@@ -33,6 +35,7 @@ public class DI
         FileService fileService = new FileService();
         LogService logService = new LogService(fileService);
         ConfigService configService = new ConfigService(fileService);
+        PersistentStorageService persistentStorageService = new PersistentStorageService(fileService);
         DiscordService discordService = new DiscordService(configService);
         SetupService setupService = new SetupService(inputHandler, configService, discordService);
         FancyMuteService fancyMuteService = new FancyMuteService(discordService);
@@ -43,6 +46,7 @@ public class DI
         .AddSingleton<ILogService>(logService)
         .AddSingleton<IFileService>(fileService)
         .AddSingleton<IConfigService>(configService)
+        .AddSingleton<IPersistentStorageService>(persistentStorageService)
         .AddSingleton<IDiscordService>(discordService)
         .AddSingleton<ISetupService>(setupService)
         .AddSingleton<IFancyMuteService>(fancyMuteService)

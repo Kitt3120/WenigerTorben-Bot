@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 using Discord;
 using Discord.Commands;
 using Discord.WebSocket;
-using WenigerTorbenBot.Services.Config;
+using WenigerTorbenBot.Storage;
 using WenigerTorbenBot.Storage.Config;
 
 namespace WenigerTorbenBot.Services.Discord;
@@ -24,7 +24,7 @@ public class DiscordService : Service, IDiscordService
     private readonly DiscordSocketClient discordSocketClient;
     private readonly CommandService commandService;
 
-    private IConfig? config;
+    private IAsyncStorage<object>? storage;
 
     public DiscordService(IConfigService configService) : base()
     {
@@ -49,12 +49,14 @@ public class DiscordService : Service, IDiscordService
 
     protected override async Task InitializeAsync()
     {
-        config = configService.Get();
+        storage = configService.Get();
+        if (storage is null)
+            throw new Exception("Global config was null");
 
-        if (!config.Exists("discord.token"))
+        string? token = storage.Get<string>("discord.token");
+        if (token is null)
             throw new Exception("Config is missing option discord.token"); //TODO: Proper exception
 
-        string token = config.Get<string>("discord.token");
 
         Serilog.Log.Debug("Waiting for DiscordSocketClient to finish");
         await commandService.AddModulesAsync(Assembly.GetEntryAssembly(), DI.ServiceProvider);
@@ -76,7 +78,7 @@ public class DiscordService : Service, IDiscordService
 
     private void SynchronizeConfigs()
     {
-        IEnumerable<string> loadedGuildIds = configService.GetGuildIds();
+        IEnumerable<string> loadedGuildIds = configService.GetIdentifiers().Where(identifier => identifier.Length == 18).Where(identifier => identifier.ToCharArray().All(c => Char.IsDigit(c)));
         IEnumerable<string> actualGuildIds = discordSocketClient.Guilds.Select(guild => Convert.ToString(guild.Id));
 
         IEnumerable<string> obsoleteLoadedGuildIds = loadedGuildIds.Where(guildId => !actualGuildIds.Contains(guildId));
