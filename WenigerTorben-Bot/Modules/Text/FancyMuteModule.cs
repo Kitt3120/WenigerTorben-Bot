@@ -71,6 +71,7 @@ public class FancyMuteModule : ModuleBase<SocketCommandContext>
     }
 
     [Command("unmute")]
+    [Alias(new string[] { "mehr" })]
     [Summary("Unmutes a user")]
     public async Task UnmuteCommand([Summary("The user to unmute")] IUser? user = null)
     {
