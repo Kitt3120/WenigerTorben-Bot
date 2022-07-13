@@ -14,10 +14,10 @@ A clear and concise description of what the issue is. Ex. I'm always frustrated 
 A clear and concise description of what you want to happen.
 
 **Feature type**
-- [ ] Service
-- [ ] Module
-- [ ] Utility
-- [ ] Something else
+- Service
+- Module
+- Utility
+- Something else
 
 **Additional context**
 Add any other context or screenshots about the feature request here, or remove the section.
