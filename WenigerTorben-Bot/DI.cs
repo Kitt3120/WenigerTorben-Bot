@@ -4,6 +4,7 @@ using Serilog;
 using WenigerTorbenBot.CLI;
 using WenigerTorbenBot.Services.Discord;
 using WenigerTorbenBot.Services.FancyMute;
+using WenigerTorbenBot.Services.FFmpeg;
 using WenigerTorbenBot.Services.File;
 using WenigerTorbenBot.Services.Health;
 using WenigerTorbenBot.Services.Log;
@@ -36,6 +37,7 @@ public class DI
         LogService logService = new LogService(fileService);
         ConfigService configService = new ConfigService(fileService);
         PersistentStorageService persistentStorageService = new PersistentStorageService(fileService);
+        FFmpegService ffmpegService = new FFmpegService(fileService);
         DiscordService discordService = new DiscordService(configService);
         SetupService setupService = new SetupService(inputHandler, configService, discordService);
         FancyMuteService fancyMuteService = new FancyMuteService(discordService);
@@ -47,6 +49,7 @@ public class DI
         .AddSingleton<IFileService>(fileService)
         .AddSingleton<IConfigService>(configService)
         .AddSingleton<IPersistentStorageService>(persistentStorageService)
+        .AddSingleton<IFFmpegService>(ffmpegService)
         .AddSingleton<IDiscordService>(discordService)
         .AddSingleton<ISetupService>(setupService)
         .AddSingleton<IFancyMuteService>(fancyMuteService)
