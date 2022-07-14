@@ -2,6 +2,7 @@ using System;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Threading.Tasks;
 using Serilog;
 using Serilog.Core;
 using WenigerTorbenBot.Services.File;
@@ -48,7 +49,7 @@ public class FFmpegService : Service, IFFmpegService
         Serilog.Log.Debug("Using ffmpeg at {ffmpegPath}", ffmpegPath);
     }
 
-    public Process GetProcess(string filepath)
+    public Process GetProcess(string filepath, params string[] arguments)
     {
         if (Status != ServiceStatus.Started)
             throw new Exception($"Stream for file {filepath} requested but FFmpegService has Status {Status}."); //TODO: Proper exception
@@ -59,7 +60,7 @@ public class FFmpegService : Service, IFFmpegService
         Process? ffmpegProcess = Process.Start(new ProcessStartInfo
         {
             FileName = ffmpegPath,
-            Arguments = $"-hide_banner -loglevel panic -i \"{filepath}\" -ac 2 -f s16le -ar 48000 pipe:1",
+            Arguments = string.Join(" ", arguments),
             UseShellExecute = false,
             RedirectStandardOutput = true
         });
@@ -68,6 +69,12 @@ public class FFmpegService : Service, IFFmpegService
             throw new Exception("The FFmpeg process was null."); //TODO: Proper exception
 
         return ffmpegProcess;
+    }
+
+    public async Task StreamAudioAsync(string filepath, Stream stream)
+    {
+        using Process process = GetProcess(filepath, "-hide_banner", "-loglevel panic", $"-i \"{filepath}\"", "-ac 2", "-f s16le", "-ar 48000", "pipe:1");
+        await process.StandardOutput.BaseStream.CopyToAsync(stream);
     }
 
     protected override ServiceConfiguration CreateServiceConfiguration() => new ServiceConfigurationBuilder().Build();
