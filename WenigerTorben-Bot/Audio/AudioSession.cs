@@ -14,7 +14,7 @@ using WenigerTorbenBot.Services.FFmpeg;
 
 namespace WenigerTorbenBot.Audio;
 
-public class AudioSession
+public class AudioSession : IAudioSession
 {
     public IGuild Guild { get; private set; }
 
@@ -35,11 +35,13 @@ public class AudioSession
         queue = new List<AudioRequest>();
     }
 
-    public void Enqueue(AudioRequest audioRequest)
+    public int Enqueue(AudioRequest audioRequest)
     {
         lock (queueLock)
             if (!queue.Contains(audioRequest))
                 queue.Add(audioRequest);
+
+        return GetId(audioRequest);
     }
 
     public void Dequeue(AudioRequest audioRequest)
@@ -51,8 +53,11 @@ public class AudioSession
     public void Dequeue(int id)
     {
         lock (queueLock)
-            if (id >= 0 && id < queue.Count)
-                queue.RemoveAt(id);
+        {
+            AudioRequest? audioRequest = queue.ElementAt(id);
+            if (audioRequest is not null)
+                queue.Remove(audioRequest);
+        }
     }
 
     public int GetId(AudioRequest audioRequest)
@@ -115,7 +120,6 @@ public class AudioSession
                 Dequeue(audioRequest);
             }
         }
-
     }
 
     public IReadOnlyCollection<AudioRequest> GetQueue()
