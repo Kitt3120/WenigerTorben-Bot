@@ -44,5 +44,7 @@ public class FileService : Service, IFileService
         return path;
     }
 
+    public string GetAppDomainPath() => AppDomain.CurrentDomain.BaseDirectory;
+
     protected override ServiceConfiguration CreateServiceConfiguration() => new ServiceConfigurationBuilder().Build();
 }

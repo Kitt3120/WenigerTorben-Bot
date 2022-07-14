@@ -29,7 +29,7 @@ public abstract class Service : IService
             return;
         }
 
-        Serilog.Log.Debug("Initializing service {service}", Name);
+        Serilog.Log.Information("Initializing service {service}", Name);
         try
         {
             if (ServiceConfiguration.UsesAsyncInitialization)
