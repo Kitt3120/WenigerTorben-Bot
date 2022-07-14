@@ -2,6 +2,7 @@ using System;
 using Microsoft.Extensions.DependencyInjection;
 using Serilog;
 using WenigerTorbenBot.CLI;
+using WenigerTorbenBot.Services.Audio;
 using WenigerTorbenBot.Services.Discord;
 using WenigerTorbenBot.Services.FancyMute;
 using WenigerTorbenBot.Services.FFmpeg;
@@ -39,8 +40,9 @@ public class DI
         PersistentStorageService persistentStorageService = new PersistentStorageService(fileService);
         FFmpegService ffmpegService = new FFmpegService(fileService);
         DiscordService discordService = new DiscordService(configService);
-        SetupService setupService = new SetupService(inputHandler, configService, discordService);
+        AudioService audioService = new AudioService(ffmpegService);
         FancyMuteService fancyMuteService = new FancyMuteService(discordService);
+        SetupService setupService = new SetupService(inputHandler, configService, discordService);
 
         ServiceProvider = new ServiceCollection()
         .AddSingleton<IInputHandler>(inputHandler)
@@ -51,8 +53,9 @@ public class DI
         .AddSingleton<IPersistentStorageService>(persistentStorageService)
         .AddSingleton<IFFmpegService>(ffmpegService)
         .AddSingleton<IDiscordService>(discordService)
-        .AddSingleton<ISetupService>(setupService)
+        .AddSingleton<IAudioService>(audioService)
         .AddSingleton<IFancyMuteService>(fancyMuteService)
+        .AddSingleton<ISetupService>(setupService)
         .BuildServiceProvider();
     }
 }
