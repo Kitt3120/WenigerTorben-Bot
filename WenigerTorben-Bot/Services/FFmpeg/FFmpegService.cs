@@ -1,4 +1,5 @@
 using System;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using Serilog;
@@ -15,7 +16,7 @@ public class FFmpegService : Service, IFFmpegService
     public override ServicePriority Priority => ServicePriority.Optional;
 
     private IFileService fileService;
-    private string ffmpegPath;
+    private string? ffmpegPath;
 
     public FFmpegService(IFileService fileService)
     {
@@ -47,5 +48,28 @@ public class FFmpegService : Service, IFFmpegService
         Serilog.Log.Debug("Using ffmpeg at {ffmpegPath}", ffmpegPath);
     }
 
+    public Process GetProcess(string filepath)
+    {
+        if (Status != ServiceStatus.Started)
+            throw new Exception($"Stream for file {filepath} requested but FFmpegService has Status {Status}."); //TODO: Proper exception
+
+        if (System.IO.File.Exists(filepath))
+            throw new FileNotFoundException($"No file found at {filepath}.");
+
+        Process? ffmpegProcess = Process.Start(new ProcessStartInfo
+        {
+            FileName = ffmpegPath,
+            Arguments = $"-hide_banner -loglevel panic -i \"{filepath}\" -ac 2 -f s16le -ar 48000 pipe:1",
+            UseShellExecute = false,
+            RedirectStandardOutput = true
+        });
+
+        if (ffmpegProcess is null)
+            throw new Exception("The FFmpeg process was null."); //TODO: Proper exception
+
+        return ffmpegProcess;
+    }
+
     protected override ServiceConfiguration CreateServiceConfiguration() => new ServiceConfigurationBuilder().Build();
+
 }
