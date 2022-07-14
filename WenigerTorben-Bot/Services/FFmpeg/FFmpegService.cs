@@ -40,7 +40,7 @@ public class FFmpegService : Service, IFFmpegService
             default:
                 string[] possiblePaths = new string[] { Path.Join(relativePath, "ffmpeg"), "/bin/ffmpeg", "/usr/bin/ffmpeg", "/sbin/ffmpeg", "/usr/sbin/ffmpeg" };
 
-                path = possiblePaths.First(possiblePath => System.IO.File.Exists(possiblePath));
+                path = possiblePaths.FirstOrDefault(possiblePath => System.IO.File.Exists(possiblePath));
                 if (path is null)
                     throw new FileNotFoundException($"FFmpeg binary not found at {string.Join(", ", possiblePaths)}");
                 ffmpegPath = path;
