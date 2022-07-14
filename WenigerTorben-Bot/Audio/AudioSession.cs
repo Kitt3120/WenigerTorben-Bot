@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -9,6 +10,7 @@ using Discord.Audio;
 using Discord.WebSocket;
 using WenigerTorbenBot.Services;
 using WenigerTorbenBot.Services.Discord;
+using WenigerTorbenBot.Services.FFmpeg;
 
 namespace WenigerTorbenBot.Audio;
 
@@ -16,16 +18,17 @@ public class AudioSession
 {
     public IGuild Guild { get; private set; }
 
-    private readonly DiscordSocketClient discordSocketClient;
+    private readonly IFFmpegService ffmpegService;
+
     private readonly object queueLock;
     private readonly List<AudioRequest> queue;
     ManualResetEvent queueThreadPause;
     private Thread? queueThread;
 
-    public AudioSession(IDiscordService discordService, IGuild guild)
+    public AudioSession(IGuild guild, IFFmpegService ffmpegService)
     {
         Guild = guild;
-        this.discordSocketClient = discordService.GetWrappedClient();
+        this.ffmpegService = ffmpegService;
 
         queueLock = new object();
         queueThreadPause = new ManualResetEvent(true);
@@ -77,6 +80,12 @@ public class AudioSession
         while (true)
         {
             queueThreadPause.WaitOne();
+            if (ffmpegService.Status != ServiceStatus.Started)
+            {
+                Serilog.Log.Error("Trying to handle AudioRequest in AudioSession queue for guild {guildId}, but FFmpegService has Status {ffmpegServiceStatus}.", Guild.Id, ffmpegService.Status);
+                break;
+            }
+
             IReadOnlyCollection<AudioRequest> currentQueue = GetQueue();
             if (!currentQueue.Any())
                 break;
@@ -90,20 +99,21 @@ public class AudioSession
                 continue;
             }
 
+            using Stream audioStream = new MemoryStream(50 * 1024 * 1024); //50 MB buffer
+            Task ffmpegRead = ffmpegService.StreamAudioAsync(audioRequest.Request, audioStream);
+
             using var audioClient = targetChannel.ConnectAsync().GetAwaiter().GetResult();
-            Process ffmpeg = null; //TODO: Replace with FFmpeg Service
-            using var output = ffmpeg.StandardOutput.BaseStream;
             using var discord = audioClient.CreatePCMStream(AudioApplication.Music);
 
             try
             {
-                output.CopyTo(discord);
+                audioStream.CopyTo(discord);
             }
             finally
             {
                 discord.Flush();
+                Dequeue(audioRequest);
             }
-
         }
 
     }
