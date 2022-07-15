@@ -11,6 +11,7 @@ using Discord;
 using Discord.Audio;
 using Discord.WebSocket;
 using Serilog;
+using Serilog.Core;
 using WenigerTorbenBot.Services;
 using WenigerTorbenBot.Services.Discord;
 using WenigerTorbenBot.Services.FFmpeg;
@@ -25,7 +26,7 @@ public class AudioSession : IAudioSession
 
     private readonly object queueLock;
     private readonly List<AudioRequest> queue;
-    ManualResetEvent queueThreadPause;
+    private readonly ManualResetEvent queueThreadPause;
     private Thread? queueThread;
 
     public AudioSession(IGuild guild, IFFmpegService ffmpegService)
@@ -107,11 +108,28 @@ public class AudioSession : IAudioSession
                 continue;
             }
 
+            int bitrate = 96000;
+            int bufferMillis = 1000;
+
+            using MemoryStream audioStream = new MemoryStream(50 * 1024 * 1024);
+            ffmpegService.StreamAudioAsync(audioRequest.Request, audioStream).GetAwaiter().GetResult();
+            audioStream.Position = 0; //Reset position to begin of stream because after streaming from FFmpeg, position is at the end of buffer.
+
             using IAudioClient audioClient = targetChannel.ConnectAsync().GetAwaiter().GetResult();
-            using AudioOutStream voiceStream = audioClient.CreatePCMStream(AudioApplication.Music, 96000, 10000, 10);
+            using AudioOutStream voiceStream = audioClient.CreatePCMStream(AudioApplication.Music, bitrate, bufferMillis);
             try
             {
-                ffmpegService.StreamAudioAsync(audioRequest.Request, voiceStream).GetAwaiter().GetResult();
+                int bufferSize = 1024 * 100; //100 KB
+
+                byte[] buffer = new byte[bufferSize];
+                int read;
+                while ((read = audioStream.Read(buffer, 0, bufferSize)) > 0)
+                {
+                    queueThreadPause.WaitOne(); //Pause if pause requested
+
+                    voiceStream.Write(buffer, 0, bufferSize); //Plays stream in splitted parts, so a pause in between every part is possible
+                    Thread.Sleep((bufferSize * 8) / (bitrate * bufferMillis));
+                }
             }
             catch (Exception e)
             {
