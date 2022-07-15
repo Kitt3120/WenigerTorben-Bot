@@ -38,8 +38,10 @@ public class DiscordService : Service, IDiscordService
             AlwaysDownloadUsers = true,
             AlwaysDownloadDefaultStickers = true,
             AlwaysResolveStickers = true,
-            MessageCacheSize = 50
+            MessageCacheSize = 50,
+            GatewayIntents = GatewayIntents.All
         });
+
         this.commandService = new CommandService(new CommandServiceConfig()
         {
             LogLevel = LogSeverity.Info,
