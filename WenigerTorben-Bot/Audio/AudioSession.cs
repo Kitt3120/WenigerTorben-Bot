@@ -1,5 +1,7 @@
+using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
+using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
@@ -8,6 +10,7 @@ using System.Threading.Tasks;
 using Discord;
 using Discord.Audio;
 using Discord.WebSocket;
+using Serilog;
 using WenigerTorbenBot.Services;
 using WenigerTorbenBot.Services.Discord;
 using WenigerTorbenBot.Services.FFmpeg;
@@ -87,7 +90,7 @@ public class AudioSession : IAudioSession
             queueThreadPause.WaitOne();
             if (ffmpegService.Status != ServiceStatus.Started)
             {
-                Serilog.Log.Error("Trying to handle AudioRequest in AudioSession queue for guild {guildId}, but FFmpegService has Status {ffmpegServiceStatus}.", Guild.Id, ffmpegService.Status);
+                Log.Error("Trying to handle AudioRequest in AudioSession queue for guild {guildId}, but FFmpegService has Status {ffmpegServiceStatus}.", Guild.Id, ffmpegService.Status);
                 break;
             }
 
@@ -104,19 +107,19 @@ public class AudioSession : IAudioSession
                 continue;
             }
 
-            using Stream audioStream = new MemoryStream(50 * 1024 * 1024); //50 MB buffer
-            Task ffmpegRead = ffmpegService.StreamAudioAsync(audioRequest.Request, audioStream);
-
-            using var audioClient = targetChannel.ConnectAsync().GetAwaiter().GetResult();
-            using var discord = audioClient.CreatePCMStream(AudioApplication.Music);
-
+            using IAudioClient audioClient = targetChannel.ConnectAsync().GetAwaiter().GetResult();
+            using AudioOutStream voiceStream = audioClient.CreatePCMStream(AudioApplication.Music, 96000, 10000, 10);
             try
             {
-                audioStream.CopyTo(discord);
+                ffmpegService.StreamAudioAsync(audioRequest.Request, voiceStream).GetAwaiter().GetResult();
+            }
+            catch (Exception e)
+            {
+                Log.Error(e, "Error while streaming audio of request {audioRequest}. Skipping entry.", audioRequest);
             }
             finally
             {
-                discord.Flush();
+                voiceStream.Flush();
                 Dequeue(audioRequest);
             }
         }
