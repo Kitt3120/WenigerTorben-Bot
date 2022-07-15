@@ -23,7 +23,6 @@ namespace WenigerTorbenBot.Audio
             if (VoiceChannel is not null)
                 return VoiceChannel;
 
-            await Requestor.Guild.DownloadUsersAsync(); //TODO: Check if this is actually needed
             return Requestor.VoiceChannel;
         }
     }
