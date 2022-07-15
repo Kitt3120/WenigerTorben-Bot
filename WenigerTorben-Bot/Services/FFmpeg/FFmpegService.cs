@@ -54,7 +54,7 @@ public class FFmpegService : Service, IFFmpegService
         if (Status != ServiceStatus.Started)
             throw new Exception($"Stream for file {filepath} requested but FFmpegService has Status {Status}."); //TODO: Proper exception
 
-        if (System.IO.File.Exists(filepath))
+        if (!System.IO.File.Exists(filepath))
             throw new FileNotFoundException($"No file found at {filepath}.");
 
         Process? ffmpegProcess = Process.Start(new ProcessStartInfo
