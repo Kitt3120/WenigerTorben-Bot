@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using Discord;
 using WenigerTorbenBot.Audio;
+using WenigerTorbenBot.Audio.Queueing;
 using WenigerTorbenBot.Services.FFmpeg;
 
 namespace WenigerTorbenBot.Services.Audio;

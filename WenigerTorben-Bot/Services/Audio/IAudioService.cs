@@ -1,6 +1,7 @@
 using System;
 using Discord;
 using WenigerTorbenBot.Audio;
+using WenigerTorbenBot.Audio.Queueing;
 
 namespace WenigerTorbenBot.Services.Audio;
 

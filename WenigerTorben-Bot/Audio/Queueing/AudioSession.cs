@@ -16,7 +16,7 @@ using WenigerTorbenBot.Services;
 using WenigerTorbenBot.Services.Discord;
 using WenigerTorbenBot.Services.FFmpeg;
 
-namespace WenigerTorbenBot.Audio;
+namespace WenigerTorbenBot.Audio.Queueing;
 
 public class AudioSession : IAudioSession
 {
@@ -75,6 +75,7 @@ public class AudioSession : IAudioSession
         if (queueThread is null || !queueThread.IsAlive)
         {
             queueThread = new Thread(HandleQueue);
+            Resume();
             queueThread.Start();
         }
         else Resume();
@@ -100,7 +101,7 @@ public class AudioSession : IAudioSession
                 break;
 
             AudioRequest audioRequest = currentQueue.First();
-            IVoiceChannel? targetChannel = audioRequest.GetTargetChannelAsync().GetAwaiter().GetResult();
+            IVoiceChannel? targetChannel = audioRequest.GetTargetChannel();
             if (targetChannel is null)
             {
                 audioRequest.OriginChannel.SendMessageAsync($"{audioRequest.Requestor.Mention}, I was not able to determine the voice channel you're in. Your request will be skipped.").GetAwaiter().GetResult();
@@ -108,13 +109,11 @@ public class AudioSession : IAudioSession
                 continue;
             }
 
+            using Stream audioStream = audioRequest.AudioSource.ProvideAsync().GetAwaiter().GetResult();
+            //TODO: Error handling
+
             int bitrate = 96000;
             int bufferMillis = 1000;
-
-            using MemoryStream audioStream = new MemoryStream(50 * 1024 * 1024);
-            ffmpegService.StreamAudioAsync(audioRequest.Request, audioStream).GetAwaiter().GetResult();
-            audioStream.Position = 0; //Reset position to begin of stream because after streaming from FFmpeg, position is at the end of buffer.
-
             using IAudioClient audioClient = targetChannel.ConnectAsync().GetAwaiter().GetResult();
             using AudioOutStream voiceStream = audioClient.CreatePCMStream(AudioApplication.Music, bitrate, bufferMillis);
             try
@@ -138,6 +137,7 @@ public class AudioSession : IAudioSession
             finally
             {
                 voiceStream.Flush();
+                audioClient.StopAsync().GetAwaiter().GetResult(); //Sometimes the bot does not leave voice channels when disposing audioClient. Maybe this fixes it.
                 Dequeue(audioRequest);
             }
         }
