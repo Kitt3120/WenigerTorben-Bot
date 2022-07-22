@@ -5,7 +5,7 @@ using Newtonsoft.Json;
 
 namespace WenigerTorbenBot.Storage.Config;
 
-public class ConfigStorage<T> : AsyncStorage<T>
+public class ConfigStorage<T> : AsyncStorage<T>, IConfigStorage<T>
 {
     public ConfigStorage(string filepath) : base(filepath)
     { }

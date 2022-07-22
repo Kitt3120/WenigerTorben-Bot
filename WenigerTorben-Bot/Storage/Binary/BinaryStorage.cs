@@ -8,7 +8,7 @@ using Serilog;
 
 namespace WenigerTorbenBot.Storage.Binary;
 
-public class BinaryStorage<T> : Storage<T>
+public class BinaryStorage<T> : Storage<T>, IBinaryStorage<T>
 {
     private readonly BinaryFormatter binaryFormatter;
 
