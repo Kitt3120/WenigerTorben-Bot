@@ -40,7 +40,7 @@ public class DI
         PersistentStorageService persistentStorageService = new PersistentStorageService(fileService);
         FFmpegService ffmpegService = new FFmpegService(fileService);
         DiscordService discordService = new DiscordService(configService);
-        AudioService audioService = new AudioService(ffmpegService);
+        AudioService audioService = new AudioService(fileService, ffmpegService, discordService);
         FancyMuteService fancyMuteService = new FancyMuteService(discordService);
         SetupService setupService = new SetupService(inputHandler, configService, discordService);
 
