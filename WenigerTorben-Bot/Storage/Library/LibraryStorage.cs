@@ -35,15 +35,17 @@ public class LibraryStorage<T> : ConfigStorage<LibraryStorageEntry<T>>, ILibrary
         return base.DoSaveAsync();
     }
 
-    public async Task<LibraryStorageEntry<T>?> Import(string title, string? description, string[]? tags, Dictionary<string, string>? extras, T data)
+    public async Task<LibraryStorageEntry<T>?> Import(string title, string? description, string[]? tags, Dictionary<string, string>? extras, T data, string? key = null)
     {
-        string guid = Guid.NewGuid().ToString();
-        string path = Path.Combine(directoryPath, $"{guid}.bin");
+        if (key is null)
+            key = Guid.NewGuid().ToString();
+
+        string path = Path.Combine(directoryPath, $"{key}.bin");
         LibraryStorageEntry<T> libraryStorageEntry = new LibraryStorageEntry<T>(title, description, tags, extras, path);
         try
         {
             await libraryStorageEntry.WriteAsync(data);
-            Set(guid, libraryStorageEntry);
+            Set(key, libraryStorageEntry);
             return libraryStorageEntry;
         }
         catch (Exception e)
