@@ -23,6 +23,18 @@ public class LibraryStorage<T> : ConfigStorage<LibraryStorageEntry<T>>, ILibrary
         }
     }
 
+    protected override void DoSave()
+    {
+        Directory.CreateDirectory(directoryPath);
+        base.DoSave();
+    }
+
+    public override Task DoSaveAsync()
+    {
+        Directory.CreateDirectory(directoryPath);
+        return base.DoSaveAsync();
+    }
+
     public async Task<LibraryStorageEntry<T>?> Import(string title, string? description, string[]? tags, Dictionary<string, string>? extras, T data)
     {
         string guid = Guid.NewGuid().ToString();

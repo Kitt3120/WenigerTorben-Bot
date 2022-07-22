@@ -7,16 +7,16 @@ using WenigerTorbenBot.Storage;
 
 namespace WenigerTorbenBot.Services.Storage;
 
-public abstract class StorageService : Service, IStorageService
+public abstract class StorageService<T> : Service, IStorageService<T>
 {
     protected IFileService fileService;
 
-    protected Dictionary<string, IStorage<object>> storages;
+    protected Dictionary<string, IStorage<T>> storages;
 
     public StorageService(IFileService fileService)
     {
         this.fileService = fileService;
-        this.storages = new Dictionary<string, IStorage<object>>();
+        this.storages = new Dictionary<string, IStorage<T>>();
     }
 
     protected override void Initialize()
@@ -35,7 +35,7 @@ public abstract class StorageService : Service, IStorageService
 
     public bool Exists(string identifier = "global") => storages.ContainsKey(identifier) && storages[identifier] is not null;
 
-    public IStorage<object>? Get(string identifier = "global")
+    public IStorage<T>? Get(string identifier = "global")
     {
         if (Exists(identifier))
             return storages[identifier];

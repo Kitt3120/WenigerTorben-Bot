@@ -8,7 +8,7 @@ using WenigerTorbenBot.Storage;
 
 namespace WenigerTorbenBot.Services.Storage;
 
-public abstract class AsyncStorageService : StorageService, IAsyncStorageService
+public abstract class AsyncStorageService<T> : StorageService<T>, IAsyncStorageService<T>
 {
 
     protected AsyncStorageService(IFileService fileService) : base(fileService)
@@ -22,9 +22,9 @@ public abstract class AsyncStorageService : StorageService, IAsyncStorageService
             await LoadAsync();
     }
 
-    IAsyncStorage<object>? IAsyncStorageService.Get(string identifier)
+    IAsyncStorage<T>? IAsyncStorageService<T>.Get(string identifier)
     {
-        if (Exists(identifier) && storages[identifier] is IAsyncStorage<object> storage)
+        if (Exists(identifier) && storages[identifier] is IAsyncStorage<T> storage)
             return storage;
         else return null;
     }
@@ -36,8 +36,8 @@ public abstract class AsyncStorageService : StorageService, IAsyncStorageService
     public async Task SaveAsync(string identifier = "global")
     {
         // => await Get(identifier)?.SaveAsync(); gives warning here
-        IStorage<object>? storage = Get(identifier);
-        if (storage is not null && storage is IAsyncStorage<object> asyncStorage)
+        IStorage<T>? storage = Get(identifier);
+        if (storage is not null && storage is IAsyncStorage<T> asyncStorage)
             await asyncStorage.SaveAsync();
 
         //TODO: Log when trying to save config that does not exist
@@ -45,9 +45,9 @@ public abstract class AsyncStorageService : StorageService, IAsyncStorageService
 
     public async Task SaveAllAsync()
     {
-        List<IAsyncStorage<object>> asyncStorages = new List<IAsyncStorage<object>>();
-        foreach (IStorage<object> storage in storages.Values)
-            if (storage is IAsyncStorage<object> asyncStorage)
+        List<IAsyncStorage<T>> asyncStorages = new List<IAsyncStorage<T>>();
+        foreach (IStorage<T> storage in storages.Values)
+            if (storage is IAsyncStorage<T> asyncStorage)
                 asyncStorages.Add(asyncStorage);
         await Task.WhenAll(asyncStorages.Select(storage => storage.SaveAsync()).ToArray());
 

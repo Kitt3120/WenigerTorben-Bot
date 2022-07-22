@@ -6,7 +6,7 @@ using WenigerTorbenBot.Storage;
 
 namespace WenigerTorbenBot.Services.Storage;
 
-public interface IStorageService : IService, IDisposable
+public interface IStorageService<T> : IService, IDisposable
 {
     public string GetDirectory();
 
@@ -16,7 +16,7 @@ public interface IStorageService : IService, IDisposable
 
     public bool Exists(string identifier = "global");
 
-    public IStorage<object>? Get(string identifier = "global");
+    public IStorage<T>? Get(string identifier = "global");
 
     public void Delete(string identifier);
 

@@ -7,7 +7,7 @@ using WenigerTorbenBot.Utils;
 
 namespace WenigerTorbenBot.Services.Storage.Persistent;
 
-public class PersistentStorageService : StorageService, IPersistentStorageService
+public class PersistentStorageService<T> : StorageService<T>, IPersistentStorageService<T>
 {
     public PersistentStorageService(IFileService fileService) : base(fileService)
     { }
@@ -21,7 +21,7 @@ public class PersistentStorageService : StorageService, IPersistentStorageServic
 
     public override void Load(string identifier = "global")
     {
-        IStorage<object> storage = new BinaryStorage<object>(GetStorageFilePath(identifier));
+        IStorage<T> storage = new BinaryStorage<T>(GetStorageFilePath(identifier));
         storage.Load();
         storages[identifier] = storage;
     }

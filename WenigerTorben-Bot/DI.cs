@@ -11,6 +11,7 @@ using WenigerTorbenBot.Services.Health;
 using WenigerTorbenBot.Services.Log;
 using WenigerTorbenBot.Services.Setup;
 using WenigerTorbenBot.Services.Storage.Config;
+using WenigerTorbenBot.Services.Storage.Library;
 using WenigerTorbenBot.Services.Storage.Persistent;
 using WenigerTorbenBot.Storage.Config;
 
@@ -36,8 +37,9 @@ public class DI
         HealthService healthService = new HealthService();
         FileService fileService = new FileService();
         LogService logService = new LogService(fileService);
-        ConfigService configService = new ConfigService(fileService);
-        PersistentStorageService persistentStorageService = new PersistentStorageService(fileService);
+        ConfigStorageService<object> configService = new ConfigStorageService<object>(fileService);
+        PersistentStorageService<object> persistentStorageService = new PersistentStorageService<object>(fileService);
+        LibraryStorageService<object> libraryStorageService = new LibraryStorageService<object>(fileService);
         FFmpegService ffmpegService = new FFmpegService(fileService);
         DiscordService discordService = new DiscordService(configService);
         AudioService audioService = new AudioService(fileService, ffmpegService, discordService);
@@ -49,8 +51,9 @@ public class DI
         .AddSingleton<IHealthService>(healthService)
         .AddSingleton<ILogService>(logService)
         .AddSingleton<IFileService>(fileService)
-        .AddSingleton<IConfigService>(configService)
-        .AddSingleton<IPersistentStorageService>(persistentStorageService)
+        .AddSingleton<IConfigStorageService<object>>(configService)
+        .AddSingleton<IPersistentStorageService<object>>(persistentStorageService)
+        .AddSingleton<ILibraryStorageService<object>>(libraryStorageService)
         .AddSingleton<IFFmpegService>(ffmpegService)
         .AddSingleton<IDiscordService>(discordService)
         .AddSingleton<IAudioService>(audioService)

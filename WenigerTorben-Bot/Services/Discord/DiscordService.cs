@@ -18,7 +18,7 @@ public class DiscordService : Service, IDiscordService
     public override string Name => "Discord";
     public override ServicePriority Priority => ServicePriority.Essential;
 
-    private readonly IConfigService configService;
+    private readonly IConfigStorageService<object> configService;
 
     private bool ready;
     private readonly DiscordSocketClient discordSocketClient;
@@ -26,7 +26,7 @@ public class DiscordService : Service, IDiscordService
 
     private IAsyncStorage<object>? storage;
 
-    public DiscordService(IConfigService configService) : base()
+    public DiscordService(IConfigStorageService<object> configService) : base()
     {
         this.configService = configService;
 

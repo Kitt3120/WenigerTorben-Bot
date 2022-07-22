@@ -8,12 +8,12 @@ using WenigerTorbenBot.Utils;
 
 namespace WenigerTorbenBot.Services.Storage.Config;
 
-public class ConfigService : AsyncStorageService, IConfigService
+public class ConfigStorageService<T> : AsyncStorageService<T>, IConfigStorageService<T>
 {
-    public override string Name => "Config";
+    public override string Name => "ConfigStorage";
     public override ServicePriority Priority => ServicePriority.Essential;
 
-    public ConfigService(IFileService fileService) : base(fileService)
+    public ConfigStorageService(IFileService fileService) : base(fileService)
     { }
 
     public override string GetDirectory()
@@ -29,15 +29,15 @@ public class ConfigService : AsyncStorageService, IConfigService
 
     public override void Load(string identifier = "global")
     {
-        IAsyncStorage<object> config = new ConfigStorage<object>(GetStorageFilePath(identifier));
-        config.Load();
-        storages[identifier] = config;
+        IAsyncStorage<T> storage = new ConfigStorage<T>(GetStorageFilePath(identifier));
+        storage.Load();
+        storages[identifier] = storage;
     }
 
     public override async Task LoadAsync(string identifier = "global")
     {
-        IAsyncStorage<object> config = new ConfigStorage<object>(GetStorageFilePath(identifier));
-        await config.LoadAsync();
-        storages[identifier] = config;
+        IAsyncStorage<T> storage = new ConfigStorage<T>(GetStorageFilePath(identifier));
+        await storage.LoadAsync();
+        storages[identifier] = storage;
     }
 }

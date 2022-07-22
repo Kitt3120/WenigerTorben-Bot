@@ -4,9 +4,9 @@ using WenigerTorbenBot.Storage;
 
 namespace WenigerTorbenBot.Services.Storage;
 
-public interface IAsyncStorageService : IStorageService, IAsyncDisposable
+public interface IAsyncStorageService<T> : IStorageService<T>, IAsyncDisposable
 {
-    public new IAsyncStorage<object>? Get(string identifier = "global");
+    public new IAsyncStorage<T>? Get(string identifier = "global");
 
     public Task LoadAsync(string identifier = "global");
 
