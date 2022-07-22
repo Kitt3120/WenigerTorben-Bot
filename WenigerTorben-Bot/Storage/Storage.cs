@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
 using Serilog;
@@ -20,7 +21,7 @@ public abstract class Storage<T> : IStorage<T>
         this.storage = new Dictionary<string, T>();
     }
 
-    public bool Exists(string key) => storage.ContainsKey(key) && storage[key] is not null;
+    public bool Exists(string key) => key is not null && storage.ContainsKey(key) && storage[key] is not null;
 
     public T? Get(string key)
     {
@@ -61,9 +62,13 @@ public abstract class Storage<T> : IStorage<T>
         }
     }
 
+    public string[] GetKeys() => storage.Keys.ToArray();
+
+    public T[] GetValues() => storage.Values.ToArray();
+
     public void Remove(string key) => storage.Remove(key);
 
-    public void Delete()
+    public virtual void Delete()
     {
         Log.Debug("Deleting storage {filepath}", filepath);
         storage.Clear();

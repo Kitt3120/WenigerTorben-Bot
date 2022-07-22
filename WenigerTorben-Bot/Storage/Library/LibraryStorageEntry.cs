@@ -1,31 +1,59 @@
+using System;
 using System.Collections.Generic;
+using System.IO;
+using System.Runtime.Serialization.Formatters.Binary;
+using System.Threading.Tasks;
 
 namespace WenigerTorbenBot.Storage.Library;
 
-public class LibraryStorageEntry : ILibraryStorageEntry
+public class LibraryStorageEntry<T>
 {
-    private readonly string title;
-    private readonly string? description;
-    private readonly string[]? tags;
-    private readonly Dictionary<string, string>? extras;
-    private readonly string file;
+    //These have to be public readonly properties to be seen as data by the JSON serializer
+    public string Title { get; private set; }
+    public string? Description { get; private set; }
+    public string[]? Tags { get; private set; }
+    public Dictionary<string, string>? Extras { get; private set; }
+    public string File { get; private set; }
+
+    private readonly BinaryFormatter binaryFormatter;
 
     public LibraryStorageEntry(string title, string? description, string[]? tags, Dictionary<string, string>? extras, string file)
     {
-        this.title = title;
-        this.description = description;
-        this.tags = tags;
-        this.extras = extras;
-        this.file = file;
+        this.Title = title;
+        this.Description = description;
+        this.Tags = tags;
+        this.Extras = extras;
+        this.File = file;
+
+        this.binaryFormatter = new BinaryFormatter();
     }
 
-    public string GetTitle() => title;
+    public string GetTitle() => Title;
 
-    public string? GetDescription() => description;
+    public string? GetDescription() => Description;
 
-    public string[]? GetTags() => tags;
+    public string[]? GetTags() => Tags;
 
-    public Dictionary<string, string>? GetExtras() => extras;
+    public Dictionary<string, string>? GetExtras() => Extras;
 
-    public string GetFile() => file;
+    public string GetFile() => File;
+
+    public async Task<T?> ReadAsync()
+    {
+        FileStream fileStream = System.IO.File.OpenRead(File);
+        object deserializedObject = binaryFormatter.Deserialize(fileStream);
+        await fileStream.DisposeAsync();
+        if (deserializedObject is T loadedEntry)
+            return loadedEntry;
+        return default;
+    }
+    public async Task WriteAsync(T data)
+    {
+        FileStream fileStream = System.IO.File.OpenWrite(File);
+        binaryFormatter.Serialize(fileStream, data);
+        await fileStream.DisposeAsync();
+    }
+
+    internal void Delete() => System.IO.File.Delete(File);
+
 }
