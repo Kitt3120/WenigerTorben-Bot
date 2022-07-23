@@ -4,7 +4,7 @@ using Discord.WebSocket;
 
 namespace WenigerTorbenBot.Services.Discord;
 
-public interface IDiscordService : IService, IDiscordClient
+public interface IDiscordService : IService
 {
     public CommandService GetCommandService();
     public DiscordSocketClient GetWrappedClient();

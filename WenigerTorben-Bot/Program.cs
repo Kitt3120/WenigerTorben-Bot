@@ -17,6 +17,7 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 */
 
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
@@ -59,8 +60,11 @@ public class Program
             Environment.Exit(1);
         }
 
-        foreach (Service service in ServiceRegistry.GetServices())
-            service.Start();
+        ICollection<IService> services = ServiceRegistry.GetServices();
+        foreach (IService service in services)
+            await service.StartAsync();
+        await Task.WhenAll(services.Select(service => service.PostInitializeAsync()));
+
 
         IInputHandler? inputHandler = DI.ServiceProvider.GetService<IInputHandler>();
         if (inputHandler is null)
@@ -96,7 +100,7 @@ public class Program
         }
 
         foreach (Service service in ServiceRegistry.GetServices().Reverse())
-            await service.Stop();
+            await service.StopAsync();
     }
 
     public static void Shutdown()

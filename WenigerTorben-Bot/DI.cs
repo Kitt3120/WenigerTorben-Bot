@@ -38,22 +38,22 @@ public class DI
         HealthService healthService = new HealthService();
         FileService fileService = new FileService();
         LogService logService = new LogService(fileService);
-        ConfigStorageService<object> configService = new ConfigStorageService<object>(fileService);
+        AGCGConfigStorageService<object> agcgConfigStorageService = new AGCGConfigStorageService<object>(fileService);
         PersistentStorageService<object> persistentStorageService = new PersistentStorageService<object>(fileService);
         LibraryStorageService<object> libraryStorageService = new LibraryStorageService<object>(fileService);
         FFmpegService ffmpegService = new FFmpegService(fileService);
-        DiscordService discordService = new DiscordService(configService);
+        DiscordService discordService = new DiscordService(agcgConfigStorageService);
         AudioService audioService = new AudioService(fileService, ffmpegService, discordService);
         AudioStorageService audioStorageService = new AudioStorageService(fileService);
         FancyMuteService fancyMuteService = new FancyMuteService(discordService);
-        SetupService setupService = new SetupService(inputHandler, configService, discordService);
+        SetupService setupService = new SetupService(inputHandler, agcgConfigStorageService, discordService);
 
         ServiceProvider = new ServiceCollection()
         .AddSingleton<IInputHandler>(inputHandler)
         .AddSingleton<IHealthService>(healthService)
         .AddSingleton<ILogService>(logService)
         .AddSingleton<IFileService>(fileService)
-        .AddSingleton<IConfigStorageService<object>>(configService)
+        .AddSingleton<IConfigStorageService<object>>(agcgConfigStorageService)
         .AddSingleton<IPersistentStorageService<object>>(persistentStorageService)
         .AddSingleton<ILibraryStorageService<object>>(libraryStorageService)
         .AddSingleton<IFFmpegService>(ffmpegService)

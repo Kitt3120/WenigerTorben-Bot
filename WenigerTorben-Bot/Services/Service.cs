@@ -21,7 +21,7 @@ public abstract class Service : IService
         ServiceRegistry.Register(this);
     }
 
-    public void Start()
+    public async Task StartAsync()
     {
         if (Status != ServiceStatus.Stopped)
         {
@@ -33,7 +33,7 @@ public abstract class Service : IService
         try
         {
             if (ServiceConfiguration.UsesAsyncInitialization)
-                InitializeAsync().GetAwaiter().GetResult();
+                await InitializeAsync();
             else
                 Initialize();
             Status = ServiceStatus.Started;
@@ -46,11 +46,12 @@ public abstract class Service : IService
         }
     }
 
-    public async Task Stop()
+    public async Task StopAsync()
     {
         Serilog.Log.Debug("Stopping service {service}", Name);
         if (this is IAsyncDisposable asyncDisposable)
         {
+            Serilog.Log.Debug("Disposing service {service} asynchroniusly", Name);
             try
             {
                 await asyncDisposable.DisposeAsync();
@@ -65,6 +66,7 @@ public abstract class Service : IService
         }
         else if (this is IDisposable disposable)
         {
+            Serilog.Log.Debug("Disposing service {service}", Name);
             try
             {
                 disposable.Dispose();
@@ -81,10 +83,26 @@ public abstract class Service : IService
         Status = ServiceStatus.Stopped;
     }
 
+    public virtual async Task PostInitializeAsync()
+    {
+        Serilog.Log.Debug("Running post-initialization for service {service}", Name);
+        try
+        {
+            await DoPostInitializationAsync();
+        }
+        catch (Exception e)
+        {
+            DisposalException = e;
+            Serilog.Log.Error(e, "Post-initialization failed for service {service}", Name);
+            return;
+        }
+    }
+
     public bool IsAvailable() => Status == ServiceStatus.Started;
 
-    protected virtual void Initialize() { throw new NotImplementedException($"Initialize() has not been implemented for {Name}"); }
-    protected virtual async Task InitializeAsync() { throw new NotImplementedException($"InitializeAsync() has not been implemented for {Name}"); }
+    protected virtual void Initialize() { }
+    protected virtual Task InitializeAsync() { return Task.CompletedTask; }
+    protected virtual Task DoPostInitializationAsync() { return Task.CompletedTask; }
 
     protected abstract ServiceConfiguration CreateServiceConfiguration();
 }

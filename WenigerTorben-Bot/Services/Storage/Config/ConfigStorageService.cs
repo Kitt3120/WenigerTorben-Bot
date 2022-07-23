@@ -21,7 +21,7 @@ public class ConfigStorageService<T> : AsyncStorageService<T>, IConfigStorageSer
         if (PlatformUtils.GetOSPlatform() == PlatformID.Unix && customDirectory is null)
             return Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".config", "WenigerTorben-Bot");
         else
-            return Path.Combine(fileService.GetDataDirectory(), GetDefaultDirectory());
+            return Path.Combine(fileService.GetDataDirectory(), customDirectory ?? GetDefaultDirectory());
     }
 
     public override string GetDefaultDirectory() => "Configs";

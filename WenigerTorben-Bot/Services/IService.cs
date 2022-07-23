@@ -11,8 +11,9 @@ public interface IService
     public Exception? InitializationException { get; }
     public ServiceConfiguration ServiceConfiguration { get; }
 
-    public void Start();
-    public Task Stop();
+    public Task StartAsync();
+    public Task StopAsync();
+    public Task PostInitializeAsync();
 
     public bool IsAvailable();
 
