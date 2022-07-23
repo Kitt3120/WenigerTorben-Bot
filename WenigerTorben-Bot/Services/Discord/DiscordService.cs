@@ -192,5 +192,5 @@ public class DiscordService : Service, IDiscordService
 
     public CommandService GetCommandService() => commandService;
 
-    public IDiscordClient GetWrappedClient() => discordSocketClient;
+    public DiscordSocketClient GetWrappedClient() => discordSocketClient;
 }
