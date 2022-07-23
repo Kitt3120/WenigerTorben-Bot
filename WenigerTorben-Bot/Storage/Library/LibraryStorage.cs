@@ -13,6 +13,8 @@ public class LibraryStorage<T> : ConfigStorage<LibraryStorageEntry<T>>, ILibrary
 {
     private readonly string directoryPath;
 
+    //TODO: Clean on load
+
     public LibraryStorage(string filepath) : base(filepath)
     {
         directoryPath = Path.GetDirectoryName(filepath);
@@ -21,18 +23,7 @@ public class LibraryStorage<T> : ConfigStorage<LibraryStorageEntry<T>>, ILibrary
             directoryPath = string.Empty;
             throw new ArgumentException($"Could not get parent directory of {filepath}");
         }
-    }
-
-    protected override void DoSave()
-    {
         Directory.CreateDirectory(directoryPath);
-        base.DoSave();
-    }
-
-    public override Task DoSaveAsync()
-    {
-        Directory.CreateDirectory(directoryPath);
-        return base.DoSaveAsync();
     }
 
     public async Task<LibraryStorageEntry<T>?> Import(string title, string? description, string[]? tags, Dictionary<string, string>? extras, T data, string? key = null)
@@ -54,6 +45,11 @@ public class LibraryStorage<T> : ConfigStorage<LibraryStorageEntry<T>>, ILibrary
             Log.Error(e, "Failed to import file {path} into LibraryStorage {libraryStorage}.", path, directoryPath);
             return null;
         }
+    }
+
+    protected override Dictionary<string, LibraryStorageEntry<T>>? DoLoad()
+    {
+        return base.DoLoad();
     }
 
     public override void Delete()

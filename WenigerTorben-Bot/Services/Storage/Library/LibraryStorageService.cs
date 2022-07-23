@@ -11,16 +11,18 @@ namespace WenigerTorbenBot.Services.Storage.Library;
 
 public class LibraryStorageService<T> : AsyncStorageService<LibraryStorageEntry<T>>, ILibraryStorageService<T>
 {
-    public LibraryStorageService(IFileService fileService) : base(fileService)
+    public LibraryStorageService(IFileService fileService, string? customDirectory = null) : base(fileService, customDirectory)
     { }
 
     public override string Name => "LibraryStorage";
 
     public override ServicePriority Priority => ServicePriority.Essential;
 
-    public override string GetDirectory() => Path.Combine(fileService.GetDataDirectory(), "Libraries");
+    public override string GetDefaultDirectory() => Path.Combine(fileService.GetDataDirectory(), "Libraries");
 
-    public override string GetStorageFilePath(string identifier = "global") => Path.Join(GetDirectory(), identifier, "library.json");
+    public override string GetFileExtension() => "json";
+
+    public override string GetStorageFilePath(string identifier = "global") => Path.Join(GetDirectory(), $"{identifier}/library.{GetFileExtension()}");
 
     public override void Load(string identifier = "global")
     {

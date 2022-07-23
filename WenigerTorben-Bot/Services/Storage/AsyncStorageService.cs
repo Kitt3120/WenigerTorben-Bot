@@ -11,7 +11,7 @@ namespace WenigerTorbenBot.Services.Storage;
 public abstract class AsyncStorageService<T> : StorageService<T>, IAsyncStorageService<T>
 {
 
-    protected AsyncStorageService(IFileService fileService) : base(fileService)
+    protected AsyncStorageService(IFileService fileService, string? customDirectory = null) : base(fileService, customDirectory)
     { }
 
     protected override async Task InitializeAsync()

@@ -9,15 +9,15 @@ namespace WenigerTorbenBot.Services.Storage.Persistent;
 
 public class PersistentStorageService<T> : StorageService<T>, IPersistentStorageService<T>
 {
-    public PersistentStorageService(IFileService fileService) : base(fileService)
+    public PersistentStorageService(IFileService fileService, string? customDirectory = null) : base(fileService, customDirectory)
     { }
 
     public override string Name => "PersistentStorage";
     public override ServicePriority Priority => ServicePriority.Essential;
 
-    public override string GetDirectory() => Path.Combine(fileService.GetDataDirectory(), "PersistentStorages");
+    public override string GetDefaultDirectory() => Path.Combine(fileService.GetDataDirectory(), "PersistentStorages");
 
-    public override string GetStorageFilePath(string identifier = "global") => Path.Join(GetDirectory(), $"{identifier}.bin");
+    public override string GetFileExtension() => "bin";
 
     public override void Load(string identifier = "global")
     {

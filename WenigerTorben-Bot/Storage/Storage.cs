@@ -87,12 +87,16 @@ public abstract class Storage<T> : IStorage<T>
         {
             Dictionary<string, T>? loadedStorage = DoLoad();
             if (loadedStorage is null)
-                throw new Exception("Deserialized storage was null"); //TODO: Proper exception
+            {
+                Log.Error("Failed to load storage {filepath}: Deserialized storage was null. Keeping previous state.", filepath);
+                return;
+            }
+
             storage = loadedStorage;
         }
         catch (Exception e)
         {
-            Log.Error(e, "Error while loading storage. Keeping previous state.");
+            Log.Error(e, "Error while loading storage {filepath}. Keeping previous state.", filepath);
         }
     }
 
@@ -104,7 +108,7 @@ public abstract class Storage<T> : IStorage<T>
         }
         catch (Exception e)
         {
-            Log.Error(e, "Error while saving storage. Storage was not saved to disk.");
+            Log.Error(e, "Error while saving storage {filepath}. Storage was not saved to disk.", filepath);
         }
     }
 

@@ -13,19 +13,20 @@ public class ConfigStorageService<T> : AsyncStorageService<T>, IConfigStorageSer
     public override string Name => "ConfigStorage";
     public override ServicePriority Priority => ServicePriority.Essential;
 
-    public ConfigStorageService(IFileService fileService) : base(fileService)
+    public ConfigStorageService(IFileService fileService, string? customDirectory = null) : base(fileService, customDirectory)
     { }
 
     public override string GetDirectory()
     {
-        return PlatformUtils.GetOSPlatform() switch
-        {
-            PlatformID.Unix => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".config", "WenigerTorben-Bot"),
-            _ => Path.Combine(fileService.GetDataDirectory(), "Configs")
-        };
+        if (PlatformUtils.GetOSPlatform() == PlatformID.Unix && customDirectory is null)
+            return Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".config", "WenigerTorben-Bot");
+        else
+            return Path.Combine(fileService.GetDataDirectory(), GetDefaultDirectory());
     }
 
-    public override string GetStorageFilePath(string identifier = "global") => Path.Join(GetDirectory(), $"{identifier}.json");
+    public override string GetDefaultDirectory() => "Configs";
+
+    public override string GetFileExtension() => "json";
 
     public override void Load(string identifier = "global")
     {

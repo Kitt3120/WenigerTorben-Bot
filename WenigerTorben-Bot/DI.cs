@@ -13,6 +13,7 @@ using WenigerTorbenBot.Services.Setup;
 using WenigerTorbenBot.Services.Storage.Config;
 using WenigerTorbenBot.Services.Storage.Library;
 using WenigerTorbenBot.Services.Storage.Persistent;
+using WenigerTorbenBot.Storage.Audio;
 using WenigerTorbenBot.Storage.Config;
 
 namespace WenigerTorbenBot;
@@ -43,6 +44,7 @@ public class DI
         FFmpegService ffmpegService = new FFmpegService(fileService);
         DiscordService discordService = new DiscordService(configService);
         AudioService audioService = new AudioService(fileService, ffmpegService, discordService);
+        AudioStorageService audioStorageService = new AudioStorageService(fileService);
         FancyMuteService fancyMuteService = new FancyMuteService(discordService);
         SetupService setupService = new SetupService(inputHandler, configService, discordService);
 
@@ -57,6 +59,7 @@ public class DI
         .AddSingleton<IFFmpegService>(ffmpegService)
         .AddSingleton<IDiscordService>(discordService)
         .AddSingleton<IAudioService>(audioService)
+        .AddSingleton<IAudioStorageService>(audioStorageService)
         .AddSingleton<IFancyMuteService>(fancyMuteService)
         .AddSingleton<ISetupService>(setupService)
         .BuildServiceProvider();

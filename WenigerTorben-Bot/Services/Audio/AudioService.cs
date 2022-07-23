@@ -41,6 +41,7 @@ public class AudioService : Service, IAudioService
 
         if (discordService.Status != ServiceStatus.Started)
             throw new Exception($"DiscordService is not available. DiscordService status: {discordService.Status}."); //TODO: Proper exception
+
     }
 
     public int Enqueue(AudioRequest audioRequest) => GetAudioSession(audioRequest.Requestor.Guild).Enqueue(audioRequest);
