@@ -20,7 +20,6 @@ public class DiscordService : Service, IDiscordService
 
     private readonly IConfigStorageService<object> configService;
 
-    private bool ready;
     private readonly DiscordSocketClient discordSocketClient;
     private readonly CommandService commandService;
 
@@ -29,8 +28,6 @@ public class DiscordService : Service, IDiscordService
     public DiscordService(IConfigStorageService<object> configService) : base()
     {
         this.configService = configService;
-
-        this.ready = false;
 
         this.discordSocketClient = new DiscordSocketClient(new DiscordSocketConfig()
         {
@@ -64,7 +61,8 @@ public class DiscordService : Service, IDiscordService
         await commandService.AddModulesAsync(Assembly.GetEntryAssembly(), DI.ServiceProvider);
         discordSocketClient.MessageReceived += HandleMessageAsync;
 
-        discordSocketClient.Ready += OnDiscordClientReady;
+        bool ready = false;
+        discordSocketClient.Ready += async () => await Task.Run(() => ready = true);
         discordSocketClient.JoinedGuild += OnGuildJoinCreateConfig;
         discordSocketClient.LeftGuild += OnGuildLeftDeleteConfig;
 
@@ -102,12 +100,6 @@ public class DiscordService : Service, IDiscordService
             foreach (string guildId in newGuildIds)
                 configService.Load(guildId);
         }
-    }
-
-    private Task OnDiscordClientReady()
-    {
-        ready = true;
-        return Task.CompletedTask;
     }
 
     private async Task OnGuildJoinCreateConfig(SocketGuild socketGuild)
