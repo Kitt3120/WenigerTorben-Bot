@@ -12,10 +12,11 @@ public abstract class BasePersistentStorageService<T> : StorageService<T>, IPers
     public BasePersistentStorageService(IFileService fileService, string? customDirectory = null) : base(fileService, customDirectory)
     { }
 
-    public override string Name => "PersistentStorage";
     public override ServicePriority Priority => ServicePriority.Essential;
 
-    public override string GetFileExtension() => "bin";
+    protected override string GetTopLevelDirectoryName() => "BinaryStorages";
+
+    protected override string GetStorageFileExtension() => "bin";
 
     public override void Load(string identifier = "global")
     {

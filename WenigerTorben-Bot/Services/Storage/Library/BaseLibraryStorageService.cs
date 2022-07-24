@@ -14,13 +14,13 @@ public abstract class BaseLibraryStorageService<T> : AsyncStorageService<Library
     public BaseLibraryStorageService(IFileService fileService, string? customDirectory = null) : base(fileService, customDirectory)
     { }
 
-    public override string Name => "LibraryStorage";
-
     public override ServicePriority Priority => ServicePriority.Essential;
 
-    public override string GetFileExtension() => "json";
+    protected override string GetTopLevelDirectoryName() => "Libraries";
 
-    public override string GetStorageFilePath(string identifier = "global") => Path.Join(GetDirectory(), $"{identifier}/library.{GetFileExtension()}");
+    protected override string GetStorageFileExtension() => "json";
+
+    public override string GetStorageFilePath(string identifier = "global") => Path.Join(GetDirectory(), $"{identifier}/library.{GetStorageFileExtension()}");
 
     public override void Load(string identifier = "global")
     {

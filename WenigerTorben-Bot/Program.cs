@@ -63,8 +63,6 @@ public class Program
         ICollection<IService> services = ServiceRegistry.GetServices();
         foreach (IService service in services)
             await service.StartAsync();
-        await Task.WhenAll(services.Select(service => service.PostInitializeAsync()));
-
 
         IInputHandler? inputHandler = DI.ServiceProvider.GetService<IInputHandler>();
         if (inputHandler is null)
@@ -89,6 +87,8 @@ public class Program
         }
         else
         {
+            await Task.WhenAll(services.Select(service => service.PostInitializeAsync()));
+
             IHealthService? healthService = ServiceRegistry.Get<IHealthService>();
             if (healthService is null || !healthService.IsOverallHealthGood())
             {

@@ -10,8 +10,6 @@ public interface IStorageService<T> : IService, IDisposable
 {
     public string GetDirectory();
 
-    public string GetFileExtension();
-
     public string GetStorageFilePath(string identifier = "global");
 
     public IEnumerable<string> GetIdentifiers();

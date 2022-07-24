@@ -7,5 +7,7 @@ public class StandardGuildConfigStorageService<T> : BaseGuildConfigStorageServic
     public StandardGuildConfigStorageService(IFileService fileService, string? customDirectory = null) : base(fileService, customDirectory)
     { }
 
-    public override string GetDefaultDirectory() => "Guilds";
+    public override string Name => "GuildConfigStorage";
+
+    protected override string GetDefaultStorageDirectoryName() => "Guilds";
 }

@@ -10,14 +10,14 @@ namespace WenigerTorbenBot.Services.Storage;
 public abstract class StorageService<T> : Service, IStorageService<T>
 {
     protected IFileService fileService;
-    protected readonly string? customDirectory;
+    protected readonly string? customDirectoryName;
 
     protected Dictionary<string, IStorage<T>> storages;
 
-    public StorageService(IFileService fileService, string? customDirectory = null)
+    public StorageService(IFileService fileService, string? customDirectoryName = null)
     {
         this.fileService = fileService;
-        this.customDirectory = customDirectory;
+        this.customDirectoryName = customDirectoryName;
 
         this.storages = new Dictionary<string, IStorage<T>>();
     }
@@ -30,13 +30,17 @@ public abstract class StorageService<T> : Service, IStorageService<T>
             Load();
     }
 
-    public virtual string GetDirectory() => Path.Combine(fileService.GetDataDirectory(), customDirectory ?? GetDefaultDirectory());
+    protected abstract string GetTopLevelDirectoryName();
 
-    public abstract string GetDefaultDirectory();
+    protected abstract string GetDefaultStorageDirectoryName();
 
-    public abstract string GetFileExtension();
+    protected string GetStorageDirectoryName() => customDirectoryName ?? GetDefaultStorageDirectoryName();
 
-    public virtual string GetStorageFilePath(string identifier = "global") => Path.Combine(GetDirectory(), $"{identifier}.{GetFileExtension()}");
+    public virtual string GetDirectory() => Path.Combine(fileService.GetDataDirectory(), GetTopLevelDirectoryName(), GetStorageDirectoryName());
+
+    protected abstract string GetStorageFileExtension();
+
+    public virtual string GetStorageFilePath(string identifier = "global") => Path.Combine(GetDirectory(), $"{identifier}.{GetStorageFileExtension()}");
 
     public IEnumerable<string> GetIdentifiers() => storages.Keys;
 

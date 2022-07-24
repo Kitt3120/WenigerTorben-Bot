@@ -15,8 +15,6 @@ public abstract class BaseGuildConfigStorageService<T> : BaseConfigStorageServic
     public BaseGuildConfigStorageService(IFileService fileService, string? customDirectory = null) : base(fileService, customDirectory)
     { }
 
-    public override string Name => "GuildConfigStorage";
-
     protected override Task DoPostInitializationAsync()
     {
         IDiscordService? discordService = ServiceRegistry.Get<IDiscordService>();

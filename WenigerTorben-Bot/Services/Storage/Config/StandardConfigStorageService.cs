@@ -7,5 +7,7 @@ public class StandardConfigStorageService<T> : BaseConfigStorageService<T>
     public StandardConfigStorageService(IFileService fileService, string? customDirectory = null) : base(fileService, customDirectory)
     { }
 
-    public override string GetDefaultDirectory() => "Misc";
+    public override string Name => "ConfigStorage";
+
+    protected override string GetDefaultStorageDirectoryName() => "Misc";
 }
