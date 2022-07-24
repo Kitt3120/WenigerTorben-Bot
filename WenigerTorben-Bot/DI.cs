@@ -11,6 +11,7 @@ using WenigerTorbenBot.Services.Health;
 using WenigerTorbenBot.Services.Log;
 using WenigerTorbenBot.Services.Setup;
 using WenigerTorbenBot.Services.Storage.Config;
+using WenigerTorbenBot.Services.Storage.Config.Guild;
 using WenigerTorbenBot.Services.Storage.Library;
 using WenigerTorbenBot.Services.Storage.Persistent;
 using WenigerTorbenBot.Storage.Audio;
@@ -38,24 +39,26 @@ public class DI
         HealthService healthService = new HealthService();
         FileService fileService = new FileService();
         LogService logService = new LogService(fileService);
-        AGCGConfigStorageService<object> agcgConfigStorageService = new AGCGConfigStorageService<object>(fileService);
-        PersistentStorageService<object> persistentStorageService = new PersistentStorageService<object>(fileService);
-        LibraryStorageService<object> libraryStorageService = new LibraryStorageService<object>(fileService);
+        StandardConfigStorageService<object> standardConfigStorageService = new StandardConfigStorageService<object>(fileService);
+        StandardGuildConfigStorageService<object> standardGuildConfigStorageService = new StandardGuildConfigStorageService<object>(fileService);
+        StandardPersistentStorageService<object> standardPersistentStorageService = new StandardPersistentStorageService<object>(fileService);
+        StandardLibraryStorageService<object> standardLibraryStorageService = new StandardLibraryStorageService<object>(fileService);
         FFmpegService ffmpegService = new FFmpegService(fileService);
-        DiscordService discordService = new DiscordService(agcgConfigStorageService);
+        DiscordService discordService = new DiscordService(standardConfigStorageService);
         AudioService audioService = new AudioService(fileService, ffmpegService, discordService);
         AudioStorageService audioStorageService = new AudioStorageService(fileService);
         FancyMuteService fancyMuteService = new FancyMuteService(discordService);
-        SetupService setupService = new SetupService(inputHandler, agcgConfigStorageService, discordService);
+        SetupService setupService = new SetupService(inputHandler, standardConfigStorageService, discordService);
 
         ServiceProvider = new ServiceCollection()
         .AddSingleton<IInputHandler>(inputHandler)
         .AddSingleton<IHealthService>(healthService)
         .AddSingleton<ILogService>(logService)
         .AddSingleton<IFileService>(fileService)
-        .AddSingleton<IConfigStorageService<object>>(agcgConfigStorageService)
-        .AddSingleton<IPersistentStorageService<object>>(persistentStorageService)
-        .AddSingleton<ILibraryStorageService<object>>(libraryStorageService)
+        .AddSingleton<IConfigStorageService<object>>(standardConfigStorageService)
+        .AddSingleton<IGuildConfigStorageService<object>>(standardGuildConfigStorageService)
+        .AddSingleton<IPersistentStorageService<object>>(standardPersistentStorageService)
+        .AddSingleton<ILibraryStorageService<object>>(standardLibraryStorageService)
         .AddSingleton<IFFmpegService>(ffmpegService)
         .AddSingleton<IDiscordService>(discordService)
         .AddSingleton<IAudioService>(audioService)

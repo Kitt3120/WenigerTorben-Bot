@@ -9,16 +9,14 @@ using WenigerTorbenBot.Storage.Library;
 
 namespace WenigerTorbenBot.Services.Storage.Library;
 
-public class LibraryStorageService<T> : AsyncStorageService<LibraryStorageEntry<T>>, ILibraryStorageService<T>
+public abstract class BaseLibraryStorageService<T> : AsyncStorageService<LibraryStorageEntry<T>>, ILibraryStorageService<T>
 {
-    public LibraryStorageService(IFileService fileService, string? customDirectory = null) : base(fileService, customDirectory)
+    public BaseLibraryStorageService(IFileService fileService, string? customDirectory = null) : base(fileService, customDirectory)
     { }
 
     public override string Name => "LibraryStorage";
 
     public override ServicePriority Priority => ServicePriority.Essential;
-
-    public override string GetDefaultDirectory() => Path.Combine(fileService.GetDataDirectory(), "Libraries");
 
     public override string GetFileExtension() => "json";
 

@@ -6,14 +6,16 @@ using System.Threading.Tasks;
 using Discord.WebSocket;
 using WenigerTorbenBot.Services.Discord;
 using WenigerTorbenBot.Services.File;
-using WenigerTorbenBot.Storage.Config;
+using WenigerTorbenBot.Services.Storage.Config;
 
-namespace WenigerTorbenBot.Services.Storage.Config;
+namespace WenigerTorbenBot.Services.Storage.Config.Guild;
 
-public class AGCGConfigStorageService<T> : ConfigStorageService<T>
+public abstract class BaseGuildConfigStorageService<T> : BaseConfigStorageService<T>, IGuildConfigStorageService<T>
 {
-    public AGCGConfigStorageService(IFileService fileService, string? customDirectory = null) : base(fileService, customDirectory)
+    public BaseGuildConfigStorageService(IFileService fileService, string? customDirectory = null) : base(fileService, customDirectory)
     { }
+
+    public override string Name => "GuildConfigStorage";
 
     protected override Task DoPostInitializationAsync()
     {
@@ -24,15 +26,15 @@ public class AGCGConfigStorageService<T> : ConfigStorageService<T>
             throw new Exception($"DiscordService is not available. DiscordService status: {discordService.Status}."); //TODO: Proper exception
 
         DiscordSocketClient discordSocketClient = discordService.GetWrappedClient();
-        SynchronizeConfigs(discordSocketClient);
-        discordSocketClient.JoinedGuild += OnGuildJoinCreateConfig;
-        discordSocketClient.LeftGuild += OnGuildLeftDeleteConfig;
+        (this as IGuildConfigStorageService<T>).SynchronizeConfigs(discordSocketClient);
+        discordSocketClient.JoinedGuild += (this as IGuildConfigStorageService<T>).OnGuildJoin;
+        discordSocketClient.LeftGuild += (this as IGuildConfigStorageService<T>).OnGuildLeave;
         return Task.CompletedTask;
     }
 
-    private void SynchronizeConfigs(DiscordSocketClient discordSocketClient)
+    void IGuildConfigStorageService<T>.SynchronizeConfigs(DiscordSocketClient discordSocketClient)
     {
-        IEnumerable<string> loadedGuildIds = GetIdentifiers().Where(identifier => identifier.Length == 18).Where(identifier => identifier.ToCharArray().All(c => char.IsDigit(c)));
+        IEnumerable<string> loadedGuildIds = GetIdentifiers();
         IEnumerable<string> actualGuildIds = discordSocketClient.Guilds.Select(guild => Convert.ToString(guild.Id));
 
         IEnumerable<string> obsoleteLoadedGuildIds = loadedGuildIds.Where(guildId => !actualGuildIds.Contains(guildId));
@@ -56,12 +58,13 @@ public class AGCGConfigStorageService<T> : ConfigStorageService<T>
         }
     }
 
-    private async Task OnGuildJoinCreateConfig(SocketGuild socketGuild)
+    async Task IGuildConfigStorageService<T>.OnGuildJoin(SocketGuild socketGuild)
     {
         Serilog.Log.Information("Joined Guild {guild}. Creating config.", socketGuild.Id);
         await LoadAsync(Convert.ToString(socketGuild.Id));
     }
-    private Task OnGuildLeftDeleteConfig(SocketGuild socketGuild)
+
+    Task IGuildConfigStorageService<T>.OnGuildLeave(SocketGuild socketGuild)
     {
         Serilog.Log.Information("Left Guild {guild}. Deleting config.", socketGuild.Id);
         Delete(Convert.ToString(socketGuild.Id));

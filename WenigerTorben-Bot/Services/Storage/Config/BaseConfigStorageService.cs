@@ -8,23 +8,21 @@ using WenigerTorbenBot.Utils;
 
 namespace WenigerTorbenBot.Services.Storage.Config;
 
-public class ConfigStorageService<T> : AsyncStorageService<T>, IConfigStorageService<T>
+public abstract class BaseConfigStorageService<T> : AsyncStorageService<T>, IConfigStorageService<T>
 {
     public override string Name => "ConfigStorage";
     public override ServicePriority Priority => ServicePriority.Essential;
 
-    public ConfigStorageService(IFileService fileService, string? customDirectory = null) : base(fileService, customDirectory)
+    public BaseConfigStorageService(IFileService fileService, string? customDirectory = null) : base(fileService, customDirectory)
     { }
 
     public override string GetDirectory()
     {
-        if (PlatformUtils.GetOSPlatform() == PlatformID.Unix && customDirectory is null)
-            return Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".config", "WenigerTorben-Bot");
+        if (PlatformUtils.GetOSPlatform() == PlatformID.Unix)
+            return Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".config", "WenigerTorben-Bot", customDirectory ?? GetDefaultDirectory());
         else
-            return Path.Combine(fileService.GetDataDirectory(), customDirectory ?? GetDefaultDirectory());
+            return Path.Combine(fileService.GetDataDirectory(), "Configs", customDirectory ?? GetDefaultDirectory());
     }
-
-    public override string GetDefaultDirectory() => "Configs";
 
     public override string GetFileExtension() => "json";
 

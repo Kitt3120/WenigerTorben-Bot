@@ -3,7 +3,7 @@ using WenigerTorbenBot.Services.Storage.Library;
 
 namespace WenigerTorbenBot.Storage.Audio;
 
-public class AudioStorageService : LibraryStorageService<byte[]>, IAudioStorageService
+public class AudioStorageService : BaseLibraryStorageService<byte[]>, IAudioStorageService
 {
     public AudioStorageService(IFileService fileService, string? customDirectory = null) : base(fileService, customDirectory)
     { }
