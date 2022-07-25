@@ -23,12 +23,15 @@ public abstract class AsyncStorage<T> : Storage<T>, IAsyncStorage<T>
         {
             Dictionary<string, T>? loadedStorage = await DoLoadAsync();
             if (loadedStorage is null)
-                throw new Exception("Deserialized storage was null"); //TODO: Proper exception
+            {
+                Log.Error("Failed to load storage {filepath}: Deserialized storage was null. Keeping previous state.", filepath);
+                return;
+            }
             storage = loadedStorage;
         }
         catch (Exception e)
         {
-            Log.Error(e, "Error while loading storage. Keeping previous state.");
+            Log.Error(e, "Error while loading storage {filepath}. Keeping previous state.", filepath);
         }
     }
 
@@ -40,7 +43,7 @@ public abstract class AsyncStorage<T> : Storage<T>, IAsyncStorage<T>
         }
         catch (Exception e)
         {
-            Log.Error(e, "Error while saving storage. Storage was not saved to disk.");
+            Log.Error(e, "Error while saving storage {filepath}. Storage was not saved to disk.", filepath);
         }
     }
 

@@ -2,6 +2,7 @@ using System;
 using Microsoft.Extensions.DependencyInjection;
 using Serilog;
 using WenigerTorbenBot.CLI;
+using WenigerTorbenBot.Services.Audio;
 using WenigerTorbenBot.Services.Discord;
 using WenigerTorbenBot.Services.FancyMute;
 using WenigerTorbenBot.Services.FFmpeg;
@@ -10,6 +11,9 @@ using WenigerTorbenBot.Services.Health;
 using WenigerTorbenBot.Services.Log;
 using WenigerTorbenBot.Services.Setup;
 using WenigerTorbenBot.Services.Storage.Config;
+using WenigerTorbenBot.Services.Storage.Config.Guild;
+using WenigerTorbenBot.Services.Storage.Library;
+using WenigerTorbenBot.Services.Storage.Library.Audio;
 using WenigerTorbenBot.Services.Storage.Persistent;
 using WenigerTorbenBot.Storage.Config;
 
@@ -35,24 +39,32 @@ public class DI
         HealthService healthService = new HealthService();
         FileService fileService = new FileService();
         LogService logService = new LogService(fileService);
-        ConfigService configService = new ConfigService(fileService);
-        PersistentStorageService persistentStorageService = new PersistentStorageService(fileService);
+        StandardConfigStorageService standardConfigStorageService = new StandardConfigStorageService(fileService);
+        GuildConfigStorageService standardGuildConfigStorageService = new GuildConfigStorageService(fileService);
+        StandardPersistentStorageService standardPersistentStorageService = new StandardPersistentStorageService(fileService);
+        StandardLibraryStorageService standardLibraryStorageService = new StandardLibraryStorageService(fileService);
+        AudioLibraryStorageService audioLibraryStorageService = new AudioLibraryStorageService(fileService);
         FFmpegService ffmpegService = new FFmpegService(fileService);
-        DiscordService discordService = new DiscordService(configService);
-        SetupService setupService = new SetupService(inputHandler, configService, discordService);
+        DiscordService discordService = new DiscordService(standardConfigStorageService);
+        AudioService audioService = new AudioService(fileService, ffmpegService, discordService);
         FancyMuteService fancyMuteService = new FancyMuteService(discordService);
+        SetupService setupService = new SetupService(inputHandler, standardConfigStorageService, discordService);
 
         ServiceProvider = new ServiceCollection()
         .AddSingleton<IInputHandler>(inputHandler)
         .AddSingleton<IHealthService>(healthService)
         .AddSingleton<ILogService>(logService)
         .AddSingleton<IFileService>(fileService)
-        .AddSingleton<IConfigService>(configService)
-        .AddSingleton<IPersistentStorageService>(persistentStorageService)
+        .AddSingleton(standardConfigStorageService)
+        .AddSingleton(standardGuildConfigStorageService)
+        .AddSingleton(standardPersistentStorageService)
+        .AddSingleton(standardLibraryStorageService)
+        .AddSingleton(audioLibraryStorageService)
         .AddSingleton<IFFmpegService>(ffmpegService)
         .AddSingleton<IDiscordService>(discordService)
-        .AddSingleton<ISetupService>(setupService)
+        .AddSingleton<IAudioService>(audioService)
         .AddSingleton<IFancyMuteService>(fancyMuteService)
+        .AddSingleton<ISetupService>(setupService)
         .BuildServiceProvider();
     }
 }

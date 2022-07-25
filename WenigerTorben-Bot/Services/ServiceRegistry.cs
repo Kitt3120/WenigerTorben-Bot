@@ -4,7 +4,7 @@ namespace WenigerTorbenBot.Services;
 
 public class ServiceRegistry
 {
-    private readonly static List<Service> services = new List<Service>();
+    private readonly static List<IService> services = new List<IService>();
 
     public static void Register(Service service)
     {
@@ -19,5 +19,5 @@ public class ServiceRegistry
                 return s;
         return default;
     }
-    public static ICollection<Service> GetServices() => services.AsReadOnly();
+    public static ICollection<IService> GetServices() => services.AsReadOnly();
 }

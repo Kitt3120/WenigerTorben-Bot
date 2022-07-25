@@ -13,7 +13,7 @@ public class SetupService : Service, ISetupService
     public override ServicePriority Priority => ServicePriority.Optional;
 
     private readonly InputHandler inputHandler;
-    private readonly IConfigService configService;
+    private readonly IConfigStorageService<object> configService;
     private readonly IDiscordService discordService;
 
     private IAsyncStorage<object>? config;
@@ -23,7 +23,7 @@ public class SetupService : Service, ISetupService
     private readonly int endState;
     private bool running;
 
-    public SetupService(InputHandler inputHandler, IConfigService configService, IDiscordService discordService)
+    public SetupService(InputHandler inputHandler, IConfigStorageService<object> configService, IDiscordService discordService)
     {
         this.inputHandler = inputHandler;
         this.configService = configService;

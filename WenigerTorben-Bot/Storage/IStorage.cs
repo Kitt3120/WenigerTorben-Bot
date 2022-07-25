@@ -18,6 +18,10 @@ public interface IStorage<T>
 
     public T GetOrSet(string key, T defaultValue);
 
+    public string[] GetKeys();
+
+    public T[] GetValues();
+
     public void Remove(string key);
 
     public void Load();
