@@ -59,9 +59,9 @@ public abstract class StorageService<T> : Service, IStorageService<T>
             storage.Save();
     }
 
-    public IReadOnlyCollection<string> GetIdentifiers() => storages.Keys.ToImmutableArray();
+    public IReadOnlyCollection<string> GetIdentifiers() => storages.Keys;
 
-    public IReadOnlyCollection<IStorage<T>> GetStorages() => storages.Values.ToImmutableArray();
+    public IReadOnlyCollection<IStorage<T>> GetStorages() => storages.Values;
 
     public bool Exists(string identifier = "global") => storages.ContainsKey(identifier) && storages[identifier] is not null;
 

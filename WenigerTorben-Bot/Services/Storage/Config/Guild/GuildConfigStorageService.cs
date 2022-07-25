@@ -1,18 +1,20 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Security.AccessControl;
 using System.Threading.Tasks;
 using Discord.WebSocket;
 using WenigerTorbenBot.Services.Discord;
 using WenigerTorbenBot.Services.File;
-using WenigerTorbenBot.Services.Storage.Config;
 
 namespace WenigerTorbenBot.Services.Storage.Config.Guild;
 
-public abstract class BaseGuildConfigStorageService<T> : BaseConfigStorageService<T>, IGuildConfigStorageService<T>
+public class GuildConfigStorageService : BaseConfigStorageService<object>
 {
-    public BaseGuildConfigStorageService(IFileService fileService, string? customDirectory = null) : base(fileService, customDirectory)
+    public override string Name => "GuildConfigStorage";
+
+    protected override string GetDefaultStorageDirectoryName() => "Guilds";
+
+    public GuildConfigStorageService(IFileService fileService, string? customDirectory = null) : base(fileService, customDirectory)
     { }
 
     protected override Task DoPostInitializationAsync()
@@ -24,19 +26,19 @@ public abstract class BaseGuildConfigStorageService<T> : BaseConfigStorageServic
             throw new Exception($"DiscordService is not available. DiscordService status: {discordService.Status}."); //TODO: Proper exception
 
         DiscordSocketClient discordSocketClient = discordService.GetWrappedClient();
-        (this as IGuildConfigStorageService<T>).SynchronizeConfigs(discordSocketClient);
-        discordSocketClient.JoinedGuild += (this as IGuildConfigStorageService<T>).OnGuildJoin;
-        discordSocketClient.LeftGuild += (this as IGuildConfigStorageService<T>).OnGuildLeave;
+        SynchronizeConfigs(discordSocketClient.Guilds);
+        discordSocketClient.JoinedGuild += OnGuildJoin;
+        discordSocketClient.LeftGuild += OnGuildLeave;
         return Task.CompletedTask;
     }
 
-    void IGuildConfigStorageService<T>.SynchronizeConfigs(DiscordSocketClient discordSocketClient)
+    private void SynchronizeConfigs(IReadOnlyCollection<SocketGuild> guilds)
     {
-        IEnumerable<string> loadedGuildIds = GetIdentifiers();
-        IEnumerable<string> actualGuildIds = discordSocketClient.Guilds.Select(guild => Convert.ToString(guild.Id));
+        IReadOnlyCollection<string> loadedGuildIds = GetIdentifiers();
+        IEnumerable<string> actualGuilds = guilds.Select(guild => guild.Id.ToString());
 
-        IEnumerable<string> obsoleteLoadedGuildIds = loadedGuildIds.Where(guildId => !actualGuildIds.Contains(guildId));
-        IEnumerable<string> newGuildIds = actualGuildIds.Where(guildId => !loadedGuildIds.Contains(guildId));
+        IEnumerable<string> obsoleteLoadedGuildIds = loadedGuildIds.Where(guildId => guildId == "global" || !actualGuilds.Contains(guildId));
+        IEnumerable<string> newGuildIds = actualGuilds.Where(guildId => !loadedGuildIds.Contains(guildId));
 
         int obsoleteAmount = obsoleteLoadedGuildIds.Count();
         int newAmount = newGuildIds.Count();
@@ -56,13 +58,13 @@ public abstract class BaseGuildConfigStorageService<T> : BaseConfigStorageServic
         }
     }
 
-    async Task IGuildConfigStorageService<T>.OnGuildJoin(SocketGuild socketGuild)
+    private async Task OnGuildJoin(SocketGuild socketGuild)
     {
         Serilog.Log.Information("Joined Guild {guild}. Creating config.", socketGuild.Id);
         await LoadAsync(Convert.ToString(socketGuild.Id));
     }
 
-    Task IGuildConfigStorageService<T>.OnGuildLeave(SocketGuild socketGuild)
+    private Task OnGuildLeave(SocketGuild socketGuild)
     {
         Serilog.Log.Information("Left Guild {guild}. Deleting config.", socketGuild.Id);
         Delete(Convert.ToString(socketGuild.Id));

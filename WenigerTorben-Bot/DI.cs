@@ -38,10 +38,10 @@ public class DI
         HealthService healthService = new HealthService();
         FileService fileService = new FileService();
         LogService logService = new LogService(fileService);
-        StandardConfigStorageService<object> standardConfigStorageService = new StandardConfigStorageService<object>(fileService);
-        StandardGuildConfigStorageService<object> standardGuildConfigStorageService = new StandardGuildConfigStorageService<object>(fileService);
-        StandardPersistentStorageService<object> standardPersistentStorageService = new StandardPersistentStorageService<object>(fileService);
-        StandardLibraryStorageService<object> standardLibraryStorageService = new StandardLibraryStorageService<object>(fileService);
+        StandardConfigStorageService standardConfigStorageService = new StandardConfigStorageService(fileService);
+        GuildConfigStorageService standardGuildConfigStorageService = new GuildConfigStorageService(fileService);
+        StandardPersistentStorageService standardPersistentStorageService = new StandardPersistentStorageService(fileService);
+        StandardLibraryStorageService standardLibraryStorageService = new StandardLibraryStorageService(fileService);
         FFmpegService ffmpegService = new FFmpegService(fileService);
         DiscordService discordService = new DiscordService(standardConfigStorageService);
         AudioService audioService = new AudioService(fileService, ffmpegService, discordService);
@@ -53,10 +53,10 @@ public class DI
         .AddSingleton<IHealthService>(healthService)
         .AddSingleton<ILogService>(logService)
         .AddSingleton<IFileService>(fileService)
-        .AddSingleton<IConfigStorageService<object>>(standardConfigStorageService)
-        .AddSingleton<IGuildConfigStorageService<object>>(standardGuildConfigStorageService)
-        .AddSingleton<IPersistentStorageService<object>>(standardPersistentStorageService)
-        .AddSingleton<ILibraryStorageService<object>>(standardLibraryStorageService)
+        .AddSingleton(standardConfigStorageService)
+        .AddSingleton(standardGuildConfigStorageService)
+        .AddSingleton(standardPersistentStorageService)
+        .AddSingleton(standardLibraryStorageService)
         .AddSingleton<IFFmpegService>(ffmpegService)
         .AddSingleton<IDiscordService>(discordService)
         .AddSingleton<IAudioService>(audioService)
