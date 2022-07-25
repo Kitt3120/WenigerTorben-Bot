@@ -9,5 +9,5 @@ public class StandardLibraryStorageService<T> : BaseLibraryStorageService<T>
 
     public override string Name => "LibraryStorage";
 
-    protected override string GetDefaultStorageDirectoryName() => "Libraries";
+    protected override string GetDefaultStorageDirectoryName() => "Misc";
 }
