@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using System.Threading.Tasks;
+using Discord.WebSocket;
 using WenigerTorbenBot.Services;
 using WenigerTorbenBot.Services.FFmpeg;
 
@@ -8,7 +9,7 @@ namespace WenigerTorbenBot.Audio.AudioSource.Implementations;
 
 public class FileAudioSource : AudioSource
 {
-    public FileAudioSource(string request) : base(request)
+    public FileAudioSource(SocketGuild guild, string request) : base(guild, request)
     { }
 
     public static bool IsApplicableFor(string request) => File.Exists(request);
@@ -29,5 +30,5 @@ public class FileAudioSource : AudioSource
         return audioStream;
     }
 
-    public override AudioSourceType GetAudioSourceType() => AudioSourceType.File;
+    public override AudioSourceType GetAudioSourceType() => AudioSourceType.Library;
 }

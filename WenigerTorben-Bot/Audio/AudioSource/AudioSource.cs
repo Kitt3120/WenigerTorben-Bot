@@ -1,28 +1,36 @@
 using System;
 using System.IO;
 using System.Threading.Tasks;
+using Discord.WebSocket;
 using Serilog;
 using WenigerTorbenBot.Audio.AudioSource.Implementations;
 using WenigerTorbenBot.Audio.Queueing;
+using WenigerTorbenBot.Services.Storage.Library.Audio;
 
 namespace WenigerTorbenBot.Audio.AudioSource;
 
 public abstract class AudioSource : IAudioSource
 {
+    protected SocketGuild guild;
     protected string request;
-    private Task preparationTask;
+    private readonly Task preparationTask;
     private Exception? exception;
 
-    public static IAudioSource? Create(string request)
+    public static IAudioSource? Create(SocketGuild guild, string request)
     {
+        //TODO: When static abstract interface members are released in C#11, fix this mess - https://docs.microsoft.com/en-us/dotnet/csharp/whats-new/tutorials/static-abstract-interface-methods
+        if (AudioLibraryAudioSource.IsApplicableFor(guild, request))
+            return new AudioLibraryAudioSource(guild, request);
+
         if (FileAudioSource.IsApplicableFor(request))
-            return new FileAudioSource(request);
+            return new FileAudioSource(guild, request);
 
         return null;
     }
 
-    public AudioSource(string request)
+    public AudioSource(SocketGuild guild, string request)
     {
+        this.guild = guild;
         this.request = request;
         this.preparationTask = PrepareAsync();
     }
@@ -46,8 +54,8 @@ public abstract class AudioSource : IAudioSource
     public async Task<Stream> ProvideAsync()
     {
         await preparationTask;
-        if (exception is not null)
-            throw exception;
+        if (this.exception is not null)
+            throw this.exception;
         return await DoProvideAsync();
     }
 

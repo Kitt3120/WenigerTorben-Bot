@@ -9,6 +9,8 @@ namespace WenigerTorbenBot.Storage.Library;
 public class LibraryStorageEntry<T>
 {
     //These have to be public readonly properties to be seen as data by the JSON serializer
+
+    //TODO: Add ID
     public string Title { get; private set; }
     public string? Description { get; private set; }
     public string[]? Tags { get; private set; }
@@ -37,6 +39,8 @@ public class LibraryStorageEntry<T>
     public Dictionary<string, string>? GetExtras() => Extras;
 
     public string GetFile() => File;
+
+    //TODO: Move ReadAsync() and WriteAsync() to LibraryStorage and maybe just wrap here
 
     public async Task<T?> ReadAsync()
     {
