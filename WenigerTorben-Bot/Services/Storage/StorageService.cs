@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.IO;
 using System.Linq;
 using WenigerTorbenBot.Services.File;
@@ -42,23 +43,6 @@ public abstract class StorageService<T> : Service, IStorageService<T>
 
     public virtual string GetStorageFilePath(string identifier = "global") => Path.Combine(GetDirectory(), $"{identifier}.{GetStorageFileExtension()}");
 
-    public IEnumerable<string> GetIdentifiers() => storages.Keys;
-
-    public bool Exists(string identifier = "global") => storages.ContainsKey(identifier) && storages[identifier] is not null;
-
-    public IStorage<T>? Get(string identifier = "global")
-    {
-        if (Exists(identifier))
-            return storages[identifier];
-        else return null;
-    }
-
-    public void Delete(string identifier)
-    {
-        storages[identifier].Delete();
-        storages.Remove(identifier);
-    }
-
     public abstract void Load(string identifier = "global");
 
     public void LoadAll()
@@ -73,6 +57,25 @@ public abstract class StorageService<T> : Service, IStorageService<T>
     {
         foreach (IStorage<T> storage in storages.Values)
             storage.Save();
+    }
+
+    public IReadOnlyCollection<string> GetIdentifiers() => storages.Keys.ToImmutableArray();
+
+    public IReadOnlyCollection<IStorage<T>> GetStorages() => storages.Values.ToImmutableArray();
+
+    public bool Exists(string identifier = "global") => storages.ContainsKey(identifier) && storages[identifier] is not null;
+
+    public IStorage<T>? Get(string identifier = "global")
+    {
+        if (Exists(identifier))
+            return storages[identifier];
+        else return null;
+    }
+
+    public void Delete(string identifier)
+    {
+        storages[identifier].Delete();
+        storages.Remove(identifier);
     }
 
     protected override ServiceConfiguration CreateServiceConfiguration() => new ServiceConfigurationBuilder().Build();
