@@ -6,15 +6,15 @@ using Discord.WebSocket;
 using WenigerTorbenBot.Services.Discord;
 using WenigerTorbenBot.Services.File;
 
-namespace WenigerTorbenBot.Services.Storage.Config.Guild;
+namespace WenigerTorbenBot.Services.Storage.Library.Audio;
 
-public class GuildConfigStorageService : BaseConfigStorageService<object>
+public class AudioLibraryStorageService : BaseLibraryStorageService<byte[]>
 {
-    public override string Name => "GuildConfigStorage";
+    public override string Name => "AudioLibraryStorage";
 
-    protected override string GetDefaultStorageDirectoryName() => "Guilds";
+    protected override string GetDefaultStorageDirectoryName() => "Audios";
 
-    public GuildConfigStorageService(IFileService fileService, string? customDirectory = null) : base(fileService, customDirectory)
+    public AudioLibraryStorageService(IFileService fileService, string? customDirectory = null) : base(fileService, customDirectory)
     { }
 
     protected override Task DoPostInitializationAsync()

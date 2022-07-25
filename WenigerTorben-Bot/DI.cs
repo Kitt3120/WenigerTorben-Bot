@@ -13,6 +13,7 @@ using WenigerTorbenBot.Services.Setup;
 using WenigerTorbenBot.Services.Storage.Config;
 using WenigerTorbenBot.Services.Storage.Config.Guild;
 using WenigerTorbenBot.Services.Storage.Library;
+using WenigerTorbenBot.Services.Storage.Library.Audio;
 using WenigerTorbenBot.Services.Storage.Persistent;
 using WenigerTorbenBot.Storage.Config;
 
@@ -42,6 +43,7 @@ public class DI
         GuildConfigStorageService standardGuildConfigStorageService = new GuildConfigStorageService(fileService);
         StandardPersistentStorageService standardPersistentStorageService = new StandardPersistentStorageService(fileService);
         StandardLibraryStorageService standardLibraryStorageService = new StandardLibraryStorageService(fileService);
+        AudioLibraryStorageService audioLibraryStorageService = new AudioLibraryStorageService(fileService);
         FFmpegService ffmpegService = new FFmpegService(fileService);
         DiscordService discordService = new DiscordService(standardConfigStorageService);
         AudioService audioService = new AudioService(fileService, ffmpegService, discordService);
@@ -57,6 +59,7 @@ public class DI
         .AddSingleton(standardGuildConfigStorageService)
         .AddSingleton(standardPersistentStorageService)
         .AddSingleton(standardLibraryStorageService)
+        .AddSingleton(audioLibraryStorageService)
         .AddSingleton<IFFmpegService>(ffmpegService)
         .AddSingleton<IDiscordService>(discordService)
         .AddSingleton<IAudioService>(audioService)
