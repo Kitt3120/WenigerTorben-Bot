@@ -5,6 +5,7 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using Discord.WebSocket;
+using Serilog;
 using WenigerTorbenBot.Services;
 using WenigerTorbenBot.Services.Storage.Library.Audio;
 using WenigerTorbenBot.Storage;
@@ -19,17 +20,32 @@ public class AudioLibraryAudioSource : AudioSource
     private byte[] buffer;
 
     public AudioLibraryAudioSource(SocketGuild guild, string request) : base(guild, request)
-    { }
-
-    protected override Task DoPrepareAsync()
     {
-        //TODO: Implement
+        buffer = Array.Empty<byte>();
     }
 
-    protected override Task<Stream> DoProvideAsync()
+    protected override async Task DoPrepareAsync()
     {
-        throw new System.NotImplementedException();
+        LibraryStorageEntry<byte[]>? libraryStorageEntry = GetLibraryStorageEntry(guild, request);
+        if (libraryStorageEntry is null)
+            throw new Exception($"Unable to prepare AudioLibraryAudioSource because no LibraryStorageEntry was found for guild {guild} and request \"{request}\". Did you call IsApplicableFor() first?"); //TODO: Proper exception
+
+        byte[]? data;
+        try
+        {
+            data = await libraryStorageEntry.ReadAsync();
+        }
+        catch (Exception e)
+        {
+            throw new Exception("Unable to prepare AudioLibraryAudioSource because there was an error while reading the data from disk.", e); //TODO: Proper exception
+        }
+        if (data is null)
+            throw new Exception("Unable to prepare AudioLibraryAudioSource because the desiralized data was not a byte[]."); //TODO: Proper exception
+
+        buffer = data;
     }
+
+    protected override Task<Stream> DoProvideAsync() => new Task<Stream>(() => new MemoryStream(buffer));
 
     private static LibraryStorageEntry<byte[]>? GetLibraryStorageEntry(SocketGuild guild, string request)
     {

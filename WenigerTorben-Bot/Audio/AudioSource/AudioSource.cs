@@ -13,12 +13,12 @@ public abstract class AudioSource : IAudioSource
 {
     protected SocketGuild guild;
     protected string request;
-    private readonly Task preparationTask;
-    private Exception? exception;
+    private readonly object preparationLock;
+    private Task? preparationTask;
 
     public static IAudioSource? Create(SocketGuild guild, string request)
     {
-        //TODO: When static abstract interface members are released in C#11, fix this mess - https://docs.microsoft.com/en-us/dotnet/csharp/whats-new/tutorials/static-abstract-interface-methods
+        //TODO: When static abstract interface members are released in C#11, implement in a better way - https://docs.microsoft.com/en-us/dotnet/csharp/whats-new/tutorials/static-abstract-interface-methods
         if (AudioLibraryAudioSource.IsApplicableFor(guild, request))
             return new AudioLibraryAudioSource(guild, request);
 
@@ -32,30 +32,40 @@ public abstract class AudioSource : IAudioSource
     {
         this.guild = guild;
         this.request = request;
-        this.preparationTask = PrepareAsync();
+        this.preparationLock = new object();
     }
 
     protected abstract Task DoPrepareAsync();
     protected abstract Task<Stream> DoProvideAsync();
 
-    public async Task PrepareAsync()
+    public void Prepare()
     {
-        try
+        lock (preparationLock)
         {
-            await DoPrepareAsync();
-        }
-        catch (Exception e)
-        {
-            this.exception = new Exception($"Error while preparing AudioSource of type {GetAudioSourceType()} for request {request}.", e);
-            Log.Error(e, "Error while preparing AudioSource of type {audioSourceType} for request {request}.", GetAudioSourceType(), request);
+            if (preparationTask is not null)
+            {
+                Log.Warning("Prepare() was called multiple times on AudioSource of type {audioSourceType} for request {request}. Multiple executions of Prepare() have been prevented.", GetAudioSourceType(), request);
+                return;
+            }
+
+            preparationTask = DoPrepareAsync();
         }
     }
 
     public async Task<Stream> ProvideAsync()
     {
-        await preparationTask;
-        if (this.exception is not null)
-            throw this.exception;
+        if (preparationTask is null)
+            throw new Exception($"Tried to access AudioSource of type {GetAudioSourceType()} for request {request} but it hasn't been prepared yet. Did you call Prepare() first?"); //TODO: Proper exception
+
+        try
+        {
+            await preparationTask;
+        }
+        catch (Exception e)
+        {
+            throw new Exception($"Error while preparing AudioSource of type {GetAudioSourceType()} for request {request}.", e);
+        }
+
         return await DoProvideAsync();
     }
 

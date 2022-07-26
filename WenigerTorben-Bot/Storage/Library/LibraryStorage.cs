@@ -47,11 +47,6 @@ public class LibraryStorage<T> : ConfigStorage<LibraryStorageEntry<T>>, ILibrary
         }
     }
 
-    protected override Dictionary<string, LibraryStorageEntry<T>>? DoLoad()
-    {
-        return base.DoLoad();
-    }
-
     public override void Delete()
     {
         base.Delete();
