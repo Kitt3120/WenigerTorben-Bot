@@ -45,7 +45,7 @@ public class AudioLibraryAudioSource : AudioSource
         buffer = data;
     }
 
-    protected override Task<Stream> DoProvideAsync() => new Task<Stream>(() => new MemoryStream(buffer));
+    protected override async Task<Stream> DoProvideAsync() => await Task.Run(() => new MemoryStream(buffer));
 
     private static LibraryStorageEntry<byte[]>? GetLibraryStorageEntry(SocketGuild guild, string request)
     {

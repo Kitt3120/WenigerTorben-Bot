@@ -12,6 +12,7 @@ using Discord.Audio;
 using Discord.WebSocket;
 using Serilog;
 using Serilog.Core;
+using WenigerTorbenBot.Audio.AudioSource.Implementations;
 using WenigerTorbenBot.Services;
 using WenigerTorbenBot.Services.Discord;
 using WenigerTorbenBot.Services.FFmpeg;
@@ -108,6 +109,7 @@ public class AudioSession : IAudioSession
                 Dequeue(audioRequest);
                 continue;
             }
+
 
             using Stream audioStream = audioRequest.AudioSource.ProvideAsync().GetAwaiter().GetResult();
             //TODO: Error handling

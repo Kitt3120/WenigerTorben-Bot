@@ -10,7 +10,7 @@ public class LibraryStorageEntry<T>
 {
     //These have to be public readonly properties to be seen as data by the JSON serializer
 
-    //TODO: Add ID
+    public string Id { get; private set; }
     public string Title { get; private set; }
     public string? Description { get; private set; }
     public string[]? Tags { get; private set; }
@@ -21,6 +21,7 @@ public class LibraryStorageEntry<T>
 
     public LibraryStorageEntry(string title, string? description, string[]? tags, Dictionary<string, string>? extras, string file)
     {
+        this.Id = Guid.NewGuid().ToString();
         this.Title = title;
         this.Description = description;
         this.Tags = tags;

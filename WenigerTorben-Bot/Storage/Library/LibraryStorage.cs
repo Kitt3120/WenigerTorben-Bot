@@ -47,6 +47,8 @@ public class LibraryStorage<T> : ConfigStorage<LibraryStorageEntry<T>>, ILibrary
         }
     }
 
+    //TODO: Wrap parent Set and Remove methods and add Save() to them. Remove Save() from Import after that.
+
     public override void Delete()
     {
         base.Delete();

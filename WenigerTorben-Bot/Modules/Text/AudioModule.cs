@@ -1,3 +1,9 @@
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Net;
+using System.Net.Http;
 using System.Text;
 using System.Threading.Tasks;
 using Discord;
@@ -9,6 +15,7 @@ using WenigerTorbenBot.Services.Audio;
 using WenigerTorbenBot.Services.Storage.Library.Audio;
 using WenigerTorbenBot.Storage;
 using WenigerTorbenBot.Storage.Library;
+using WenigerTorbenBot.Utils;
 
 namespace WenigerTorbenBot.Modules.Text;
 
@@ -113,13 +120,63 @@ public class AudioModule : ModuleBase<SocketCommandContext>
 
         StringBuilder stringBuilder = new StringBuilder();
         foreach (LibraryStorageEntry<byte[]> libraryStorageEntry in library.GetValues())
-            stringBuilder.AppendLine($"{libraryStorageEntry.Title} - {libraryStorageEntry.File}");
+            stringBuilder.AppendLine($"[{libraryStorageEntry.Id}] {libraryStorageEntry.Title}: {libraryStorageEntry.File}");
 
         string reply = stringBuilder.ToString();
         if (string.IsNullOrEmpty(reply))
             reply = "No entries found in this guild's library.";
 
         await ReplyAsync(reply);
+    }
+
+    [Command("audioimport")]
+    [Alias(new string[] { "ai", "aimport", "audioi" })]
+    [Summary("Imports audio from the web into the library of a guild.")]
+    public async Task AudioImport(string url, string? title = null, string? description = null, string? tags = null, string? extras = null)
+    {
+        if (audioLibraryStorageService is null || audioLibraryStorageService.Status != Services.ServiceStatus.Started)
+        {
+            await ReplyAsync("The AudioLibraryStorageService was not available");
+            return;
+        }
+
+        IStorage<LibraryStorageEntry<byte[]>>? library = audioLibraryStorageService.Get(Context.Guild.Id.ToString());
+        if (library is null)
+        {
+            await ReplyAsync("No library found for this guild");
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(title))
+            title = "Unknown";
+
+        string[] tagsArray = null;
+        Dictionary<string, string> extrasDictionary = null;
+
+        if (tags is not null)
+            tagsArray = tags.Split(";");
+
+        if (extras is not null)
+        {
+            extrasDictionary = new Dictionary<string, string>();
+            foreach (string extraPair in extras.Split(";"))
+            {
+                string[] extraPairSplit = extraPair.Split("=");
+                extrasDictionary[extraPairSplit[0]] = extraPairSplit[1];
+            }
+        }
+
+        //TODO: Move to URL utils class
+        if (Uri.TryCreate(url, UriKind.Absolute, out Uri? uri) && (uri.Scheme == Uri.UriSchemeHttp || uri.Scheme == Uri.UriSchemeHttps))
+        {
+            //TODO: Write to temporary file, then convert with FFmpegService. Below code does not work as it saves the full audio file instead of just the audio data.
+            byte[] buffer = await WebUtils.Download(uri);
+            await (library as ILibraryStorage<byte[]>).Import(title, description, tagsArray, extrasDictionary, buffer);
+            await ReplyAsync("Imported");
+            return;
+        }
+
+        await ReplyAsync("The given string was not a valid HTTP/-S URL.");
     }
 
     //TODO: Skip and Remove command
