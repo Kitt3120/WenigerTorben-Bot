@@ -150,8 +150,8 @@ public class AudioModule : ModuleBase<SocketCommandContext>
         if (string.IsNullOrWhiteSpace(title))
             title = "Unknown";
 
-        string[] tagsArray = null;
-        Dictionary<string, string> extrasDictionary = null;
+        string[]? tagsArray = null;
+        Dictionary<string, string>? extrasDictionary = null;
 
         if (tags is not null)
             tagsArray = tags.Split(";");
@@ -166,8 +166,7 @@ public class AudioModule : ModuleBase<SocketCommandContext>
             }
         }
 
-        //TODO: Move to URL utils class
-        if (Uri.TryCreate(url, UriKind.Absolute, out Uri? uri) && (uri.Scheme == Uri.UriSchemeHttp || uri.Scheme == Uri.UriSchemeHttps))
+        if (WebUtils.TryParseUri(url, out Uri? uri))
         {
             //TODO: Write to temporary file, then convert with FFmpegService. Below code does not work as it saves the full audio file instead of just the audio data.
             byte[] buffer = await WebUtils.Download(uri);
