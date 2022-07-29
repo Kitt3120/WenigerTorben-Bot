@@ -9,7 +9,7 @@ public class WebUtils
 {
     //TODO: When FFmpeg is usabe, create method to check media file headers for corruption. This way, the bot will be able to detect corrupt downloads or downloads of invalid files.
 
-    public static async Task Download(Uri uri, string file, HttpClient? httpClient = null)
+    public static async Task DownloadToDiskAsync(Uri uri, string file, HttpClient? httpClient = null)
     {
         bool noHttpClientGiven = httpClient is null;
         if (noHttpClientGiven)
@@ -23,7 +23,7 @@ public class WebUtils
             httpClient.Dispose();
     }
 
-    public static async Task<byte[]> Download(Uri uri, HttpClient? httpClient = null)
+    public static async Task<byte[]> DownloadToRamAsync(Uri uri, HttpClient? httpClient = null)
     {
         bool noHttpClientGiven = httpClient is null;
         if (noHttpClientGiven)

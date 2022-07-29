@@ -168,8 +168,14 @@ public class AudioModule : ModuleBase<SocketCommandContext>
 
         if (WebUtils.TryParseUri(url, out Uri? uri))
         {
+            if (uri is null) //Can this even happen at this point?
+            {
+                Log.Error("Uri was null when downloading media through the AudioImport command");
+                await ReplyAsync("There was an error while downloading the media");
+                return;
+            }
             //TODO: Write to temporary file, then convert with FFmpegService. Below code does not work as it saves the full audio file instead of just the audio data.
-            byte[] buffer = await WebUtils.Download(uri);
+            byte[] buffer = await WebUtils.DownloadToRamAsync(uri);
             await (library as ILibraryStorage<byte[]>).Import(title, description, tagsArray, extrasDictionary, buffer);
             await ReplyAsync("Imported");
             return;
