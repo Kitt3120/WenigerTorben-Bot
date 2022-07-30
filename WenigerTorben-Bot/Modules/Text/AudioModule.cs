@@ -142,14 +142,14 @@ public class AudioModule : ModuleBase<SocketCommandContext>
     {
         if (audioLibraryStorageService is null || audioLibraryStorageService.Status != Services.ServiceStatus.Started)
         {
-            await ReplyAsync("The AudioLibraryStorageService was not available");
+            await ReplyAsync("Sorry, the Audio-Library Storage Service is currently not available. This means that I currently can't access audio data saved for this guild.");
             return;
         }
 
         IStorage<LibraryStorageEntry<byte[]>>? storage = audioLibraryStorageService.Get(Context.Guild.Id.ToString());
         if (storage is null || audioLibraryStorageService.Get(Context.Guild.Id.ToString()) is not ILibraryStorage<byte[]> library)
         {
-            await ReplyAsync("No library found for this guild");
+            await ReplyAsync("Sorry,there is no audio library available for this guild in which I could import audio into.");
             return;
         }
 
@@ -168,43 +168,43 @@ public class AudioModule : ModuleBase<SocketCommandContext>
             foreach (string extraPair in extras.Split(";"))
             {
                 string[] extraPairSplit = extraPair.Split("=");
+                if (extraPairSplit.Length != 2)
+                {
+                    await ReplyAsync("Your syntax for one of the defined extras contains an error. Please make sure to use the correct syntax and try again.");
+                    return;
+                }
                 extrasDictionary[extraPairSplit[0]] = extraPairSplit[1];
             }
         }
 
-        if (WebUtils.TryParseUri(url, out Uri? uri))
+        if (!WebUtils.TryParseUri(url, out Uri? uri))
         {
-            if (uri is null) //Can this even happen at this point?
-            {
-                Log.Error("Uri was null when downloading media through the AudioImport command");
-                await ReplyAsync("There was an error while downloading the media");
-                return;
-            }
-            //TODO: Write to temporary file, then convert with FFmpegService. Below code does not work as it saves the full audio file instead of just the audio data.
-            string tempFilePath = Path.Combine(fileService.GetTempDirectory(), Guid.NewGuid().ToString());
-
-            try
-            {
-                await WebUtils.DownloadToDiskAsync(uri, tempFilePath);
-                byte[] data = await ffmpegService.ReadAudioAsync(tempFilePath);
-                await library.Import(title, description, tagsArray, extrasDictionary, data);
-                await ReplyAsync("Imported");
-            }
-            catch (Exception e)
-            {
-                Log.Error(e, "An exception occured while importing the media's audio stream from {url} into the Audio LibraryStorage of guild {guild}", url, Context.Guild.Id.ToString());
-                await ReplyAsync("Beim Importieren der Mediendatei in die Audio-Bibliothek der Gilde ist ein Fehler aufgetreten.");
-            }
-            finally
-            {
-                if (File.Exists(tempFilePath))
-                    File.Delete(tempFilePath);
-            }
-
+            await ReplyAsync("The given string was not a valid HTTP/-S URL.");
             return;
         }
 
-        await ReplyAsync("The given string was not a valid HTTP/-S URL.");
+        string tempFilePath = Path.Combine(fileService.GetTempDirectory(), Guid.NewGuid().ToString());
+
+        IUserMessage statusMessage = await ReplyAsync("Status: Downloading media");
+        try
+        {
+            await WebUtils.DownloadToDiskAsync(uri, tempFilePath);
+            await statusMessage.ModifyAsync(message => message.Content = "Status: Demuxing audio stream from media");
+            byte[] data = await ffmpegService.ReadAudioAsync(tempFilePath);
+            await library.Import(title, description, tagsArray, extrasDictionary, data);
+            await statusMessage.ModifyAsync(message => message.Content = "Audio imported");
+        }
+        catch (Exception e)
+        {
+            Log.Error(e, "An exception occured while importing the media's audio stream from {url} into the AudioLibraryStorage of guild {guild}", url, Context.Guild.Id.ToString());
+            await statusMessage.ModifyAsync(message => message.Content = "An error occured while importing your media into the audio library of your guild");
+        }
+        finally
+        {
+            if (File.Exists(tempFilePath))
+                File.Delete(tempFilePath);
+        }
+
     }
 
     //TODO: Skip and Remove command
