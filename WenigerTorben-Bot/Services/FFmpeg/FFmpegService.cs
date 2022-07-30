@@ -77,6 +77,13 @@ public class FFmpegService : Service, IFFmpegService
         await process.StandardOutput.BaseStream.CopyToAsync(stream);
     }
 
+    public async Task<byte[]> ReadAudioAsync(string filepath)
+    {
+        using MemoryStream memoryStream = new MemoryStream();
+        await StreamAudioAsync(filepath, memoryStream);
+        return memoryStream.GetBuffer();
+    }
+
     protected override ServiceConfiguration CreateServiceConfiguration() => new ServiceConfigurationBuilder().Build();
 
 }

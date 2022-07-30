@@ -12,6 +12,8 @@ using Serilog;
 using WenigerTorbenBot.Audio.AudioSource;
 using WenigerTorbenBot.Audio.Queueing;
 using WenigerTorbenBot.Services.Audio;
+using WenigerTorbenBot.Services.FFmpeg;
+using WenigerTorbenBot.Services.File;
 using WenigerTorbenBot.Services.Storage.Library.Audio;
 using WenigerTorbenBot.Storage;
 using WenigerTorbenBot.Storage.Library;
@@ -23,11 +25,15 @@ namespace WenigerTorbenBot.Modules.Text;
 [Summary("Module to manage a guild's audio session")]
 public class AudioModule : ModuleBase<SocketCommandContext>
 {
+    private readonly IFileService fileService;
+    private readonly IFFmpegService ffmpegService;
     private readonly IAudioService audioService;
     private readonly AudioLibraryStorageService audioLibraryStorageService;
 
-    public AudioModule(IAudioService audioService, AudioLibraryStorageService audioLibraryStorageService)
+    public AudioModule(IFileService fileService, IFFmpegService ffmpegService, IAudioService audioService, AudioLibraryStorageService audioLibraryStorageService)
     {
+        this.fileService = fileService;
+        this.ffmpegService = ffmpegService;
         this.audioService = audioService;
         this.audioLibraryStorageService = audioLibraryStorageService;
     }
@@ -140,8 +146,8 @@ public class AudioModule : ModuleBase<SocketCommandContext>
             return;
         }
 
-        IStorage<LibraryStorageEntry<byte[]>>? library = audioLibraryStorageService.Get(Context.Guild.Id.ToString());
-        if (library is null)
+        IStorage<LibraryStorageEntry<byte[]>>? storage = audioLibraryStorageService.Get(Context.Guild.Id.ToString());
+        if (storage is null || audioLibraryStorageService.Get(Context.Guild.Id.ToString()) is not ILibraryStorage<byte[]> library)
         {
             await ReplyAsync("No library found for this guild");
             return;
@@ -175,9 +181,26 @@ public class AudioModule : ModuleBase<SocketCommandContext>
                 return;
             }
             //TODO: Write to temporary file, then convert with FFmpegService. Below code does not work as it saves the full audio file instead of just the audio data.
-            byte[] buffer = await WebUtils.DownloadToRamAsync(uri);
-            await (library as ILibraryStorage<byte[]>).Import(title, description, tagsArray, extrasDictionary, buffer);
-            await ReplyAsync("Imported");
+            string tempFilePath = Path.Combine(fileService.GetTempDirectory(), Guid.NewGuid().ToString());
+
+            try
+            {
+                await WebUtils.DownloadToDiskAsync(uri, tempFilePath);
+                byte[] data = await ffmpegService.ReadAudioAsync(tempFilePath);
+                await library.Import(title, description, tagsArray, extrasDictionary, data);
+                await ReplyAsync("Imported");
+            }
+            catch (Exception e)
+            {
+                Log.Error(e, "An exception occured while importing the media's audio stream from {url} into the Audio LibraryStorage of guild {guild}", url, Context.Guild.Id.ToString());
+                await ReplyAsync("Beim Importieren der Mediendatei in die Audio-Bibliothek der Gilde ist ein Fehler aufgetreten.");
+            }
+            finally
+            {
+                if (File.Exists(tempFilePath))
+                    File.Delete(tempFilePath);
+            }
+
             return;
         }
 
