@@ -1,9 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
-using System.Net;
-using System.Net.Http;
 using System.Text;
 using System.Threading.Tasks;
 using Discord;
@@ -100,11 +97,26 @@ public class AudioModule : ModuleBase<SocketCommandContext>
         await ReplyAsync("Audio session resumed");
     }
 
-    [Command("audiolist")]
-    [Alias(new string[] { "al", "alist", "audiol" })]
-    [Summary("Prints a list of available audios")]
-    public async Task AudioList()
+    [Command("audio")]
+    [Alias("a")]
+    [Summary("Manages the audio library of your guild")]
+    public async Task Audio(string? subcommand = null, string? url = null, string? title = null, string? description = null, string? tags = null, string? extras = null)
     {
+        if (subcommand is null)
+        {
+            List<EmbedFieldBuilder> embedFields = new List<EmbedFieldBuilder>();
+            embedFields.Add(new EmbedFieldBuilder().WithName("Audio list").WithValue("Prints a list of available audios"));
+            embedFields.Add(new EmbedFieldBuilder().WithName("Audio import").WithValue("Imports audio from the web into the library of a guild"));
+
+            EmbedBuilder embedBuilder = new EmbedBuilder();
+            embedBuilder.WithTitle("Audio commands");
+            embedBuilder.WithFields(embedFields);
+            embedBuilder.WithColor(Color.Red);
+
+            await ReplyAsync(embed: embedBuilder.Build());
+            return;
+        }
+
         if (Context.User is not IGuildUser || Context.Channel is not ITextChannel)
         {
             await ReplyAsync("This command is only available on guilds");
@@ -113,99 +125,142 @@ public class AudioModule : ModuleBase<SocketCommandContext>
 
         if (audioLibraryStorageService is null || audioLibraryStorageService.Status != Services.ServiceStatus.Started)
         {
-            await ReplyAsync("The AudioLibraryStorageService was not available");
-            return;
-        }
-
-        IStorage<LibraryStorageEntry<byte[]>>? library = audioLibraryStorageService.Get(Context.Guild.Id.ToString());
-        if (library is null)
-        {
-            await ReplyAsync("No library found for this guild");
-            return;
-        }
-
-        StringBuilder stringBuilder = new StringBuilder();
-        foreach (LibraryStorageEntry<byte[]> libraryStorageEntry in library.GetValues())
-            stringBuilder.AppendLine($"[{libraryStorageEntry.Id}] {libraryStorageEntry.Title}: {libraryStorageEntry.File}");
-
-        string reply = stringBuilder.ToString();
-        if (string.IsNullOrEmpty(reply))
-            reply = "No entries found in this guild's library.";
-
-        await ReplyAsync(reply);
-    }
-
-    [Command("audioimport")]
-    [Alias(new string[] { "ai", "aimport", "audioi" })]
-    [Summary("Imports audio from the web into the library of a guild.")]
-    public async Task AudioImport(string url, string? title = null, string? description = null, string? tags = null, string? extras = null)
-    {
-        if (audioLibraryStorageService is null || audioLibraryStorageService.Status != Services.ServiceStatus.Started)
-        {
-            await ReplyAsync("Sorry, the Audio-Library Storage Service is currently not available. This means that I currently can't access audio data saved for this guild.");
+            await ReplyAsync("Sorry, the storage service is currently not available. This means that I can't access audio data saved for this guild.");
             return;
         }
 
         IStorage<LibraryStorageEntry<byte[]>>? storage = audioLibraryStorageService.Get(Context.Guild.Id.ToString());
         if (storage is null || audioLibraryStorageService.Get(Context.Guild.Id.ToString()) is not ILibraryStorage<byte[]> library)
         {
-            await ReplyAsync("Sorry,there is no audio library available for this guild in which I could import audio into.");
+            await ReplyAsync("Sorry, there is no audio library available for this guild into which I could import the audio.");
             return;
         }
 
-        if (string.IsNullOrWhiteSpace(title))
-            title = "Unknown";
+        subcommand = subcommand.ToLower();
 
-        string[]? tagsArray = null;
-        Dictionary<string, string>? extrasDictionary = null;
-
-        if (tags is not null)
-            tagsArray = tags.Split(";");
-
-        if (extras is not null)
+        if (subcommand == "list")
         {
-            extrasDictionary = new Dictionary<string, string>();
-            foreach (string extraPair in extras.Split(";"))
+            LibraryStorageEntry<byte[]>[] libraryStorageEntries = library.GetValues();
+
+            if (libraryStorageEntries.Length == 0)
             {
-                string[] extraPairSplit = extraPair.Split("=");
-                if (extraPairSplit.Length != 2)
+                await ReplyAsync("No entries found in this guild's audio library");
+                return;
+            }
+
+            try
+            {
+
+                List<EmbedFieldBuilder> embedFields = new List<EmbedFieldBuilder>();
+                foreach (LibraryStorageEntry<byte[]> libraryStorageEntry in libraryStorageEntries)
                 {
-                    await ReplyAsync("Your syntax for one of the defined extras contains an error. Please make sure to use the correct syntax and try again.");
-                    return;
+                    EmbedFieldBuilder embedFieldBuilder = new EmbedFieldBuilder().WithName(libraryStorageEntry.Title);
+                    StringBuilder valueBuilder = new StringBuilder();
+
+                    if (libraryStorageEntry.Description is not null)
+                        valueBuilder.AppendLine(libraryStorageEntry.Description);
+
+                    valueBuilder.AppendLine($"ID: {libraryStorageEntry.Id}");
+
+                    if (libraryStorageEntry.Tags is not null)
+                        valueBuilder.AppendLine($"Tags: {string.Join(", ", libraryStorageEntry.Tags)}");
+
+                    if (libraryStorageEntry.Extras is not null)
+                        foreach (KeyValuePair<string, string> extraPair in libraryStorageEntry.Extras)
+                            valueBuilder.AppendLine($"{extraPair.Key}: {extraPair.Value}");
+
+                    embedFieldBuilder.WithValue(valueBuilder.ToString());
+                    embedFields.Add(embedFieldBuilder);
                 }
-                extrasDictionary[extraPairSplit[0]] = extraPairSplit[1];
+
+                EmbedBuilder embedBuilder = new EmbedBuilder();
+                embedBuilder.WithTitle("Audios of this guild");
+                embedBuilder.WithColor(Color.Red);
+                embedBuilder.WithFields(embedFields);
+                await ReplyAsync(embed: embedBuilder.Build());
+            }
+            catch (System.Exception)
+            {
+                await ReplyAsync("No");
             }
         }
 
-        if (!WebUtils.TryParseUri(url, out Uri? uri))
+
+        else if (subcommand == "import")
         {
-            await ReplyAsync("The given string was not a valid HTTP/-S URL.");
-            return;
+            if (string.IsNullOrWhiteSpace(url))
+            {
+                await ReplyAsync("Please specify a valid URL.");
+                return;
+            }
+
+            if (string.IsNullOrWhiteSpace(title))
+            {
+                await ReplyAsync("Please specify a title for the audio.");
+                return;
+            }
+
+            string[]? tagsArray = null;
+            Dictionary<string, string>? extrasDictionary = null;
+
+            if (tags is not null)
+                tagsArray = tags.Split(";");
+
+            if (extras is not null)
+            {
+                extrasDictionary = new Dictionary<string, string>();
+                foreach (string extraPair in extras.Split(";"))
+                {
+                    string[] extraPairSplit = extraPair.Split("=");
+                    if (extraPairSplit.Length != 2)
+                    {
+                        await ReplyAsync("Your syntax for one of the defined extras contains an error. Please make sure to use the correct syntax and try again.");
+                        return;
+                    }
+                    extrasDictionary[extraPairSplit[0]] = extraPairSplit[1];
+                }
+            }
+
+            if (!WebUtils.TryParseUri(url, out Uri? uri))
+            {
+                await ReplyAsync("The given string was not a valid HTTP/-S URL.");
+                return;
+            }
+
+            string tempFilePath = Path.Combine(fileService.GetTempDirectory(), Guid.NewGuid().ToString());
+
+            IUserMessage statusMessage = await ReplyAsync("Downloading media");
+            try
+            {
+                await WebUtils.DownloadToDiskAsync(uri, tempFilePath);
+                await statusMessage.ModifyAsync(message => message.Content = "Extracting audio data from media");
+                byte[] data = await ffmpegService.ReadAudioAsync(tempFilePath);
+                if (data.Length == 0)
+                    await statusMessage.ModifyAsync(message => message.Content = "Sorry, I was not able to extract the audio of the given media file.");
+                else
+                {
+                    await library.Import(title, description, tagsArray, extrasDictionary, data);
+                    await statusMessage.ModifyAsync(message => message.Content = "Audio imported to the guild's audio library");
+                }
+            }
+            catch (Exception e)
+            {
+                Log.Error(e, "An exception occured while importing the media's audio stream from {url} into the AudioLibraryStorage of guild {guild}", url, Context.Guild.Id.ToString());
+                await statusMessage.ModifyAsync(message => message.Content = $"An error occured while importing the media into the audio library of your guild: {e.Message}");
+            }
+            finally
+            {
+                if (File.Exists(tempFilePath))
+                    File.Delete(tempFilePath);
+            }
         }
 
-        string tempFilePath = Path.Combine(fileService.GetTempDirectory(), Guid.NewGuid().ToString());
 
-        IUserMessage statusMessage = await ReplyAsync("Status: Downloading media");
-        try
-        {
-            await WebUtils.DownloadToDiskAsync(uri, tempFilePath);
-            await statusMessage.ModifyAsync(message => message.Content = "Status: Demuxing audio stream from media");
-            byte[] data = await ffmpegService.ReadAudioAsync(tempFilePath);
-            await library.Import(title, description, tagsArray, extrasDictionary, data);
-            await statusMessage.ModifyAsync(message => message.Content = "Audio imported");
-        }
-        catch (Exception e)
-        {
-            Log.Error(e, "An exception occured while importing the media's audio stream from {url} into the AudioLibraryStorage of guild {guild}", url, Context.Guild.Id.ToString());
-            await statusMessage.ModifyAsync(message => message.Content = "An error occured while importing your media into the audio library of your guild");
-        }
-        finally
-        {
-            if (File.Exists(tempFilePath))
-                File.Delete(tempFilePath);
-        }
+        else
+            await ReplyAsync($"Unknown subcommand: {subcommand}");
+
+
 
     }
 
-    //TODO: Skip and Remove command
 }
