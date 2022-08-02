@@ -102,11 +102,13 @@ public class AudioModule : ModuleBase<SocketCommandContext>
     [Summary("Manages the audio library of your guild")]
     public async Task Audio(string? subcommand = null, string? url = null, string? title = null, string? description = null, string? tags = null, string? extras = null)
     {
+        //TODO: Make modular subcommand system, this sucks
         if (subcommand is null)
         {
             List<EmbedFieldBuilder> embedFields = new List<EmbedFieldBuilder>();
-            embedFields.Add(new EmbedFieldBuilder().WithName("Audio list").WithValue("Prints a list of available audios"));
-            embedFields.Add(new EmbedFieldBuilder().WithName("Audio import").WithValue("Imports audio from the web into the library of a guild"));
+            embedFields.Add(new EmbedFieldBuilder().WithName("audio").WithValue("Prints this help"));
+            embedFields.Add(new EmbedFieldBuilder().WithName("audio list/ls").WithValue("Prints a list of available audios for this guild"));
+            embedFields.Add(new EmbedFieldBuilder().WithName("audio import/add <url> <title> [description] [tag1;tag2] [extra1=value1;extra2=value2]").WithValue("Imports audio from the web into the library of a guild"));
 
             EmbedBuilder embedBuilder = new EmbedBuilder();
             embedBuilder.WithTitle("Audio commands");
@@ -138,7 +140,7 @@ public class AudioModule : ModuleBase<SocketCommandContext>
 
         subcommand = subcommand.ToLower();
 
-        if (subcommand == "list")
+        if (subcommand == "list" || subcommand == "ls")
         {
             LibraryStorageEntry<byte[]>[] libraryStorageEntries = library.GetValues();
 
@@ -150,7 +152,6 @@ public class AudioModule : ModuleBase<SocketCommandContext>
 
             try
             {
-
                 List<EmbedFieldBuilder> embedFields = new List<EmbedFieldBuilder>();
                 foreach (LibraryStorageEntry<byte[]> libraryStorageEntry in libraryStorageEntries)
                 {
@@ -186,72 +187,18 @@ public class AudioModule : ModuleBase<SocketCommandContext>
         }
 
 
-        else if (subcommand == "import")
+        else if (subcommand == "import" || subcommand == "add")
         {
-            if (string.IsNullOrWhiteSpace(url))
-            {
-                await ReplyAsync("Please specify a valid URL.");
-                return;
-            }
-
-            if (string.IsNullOrWhiteSpace(title))
-            {
-                await ReplyAsync("Please specify a title for the audio.");
-                return;
-            }
-
-            string[]? tagsArray = null;
-            Dictionary<string, string>? extrasDictionary = null;
-
-            if (tags is not null)
-                tagsArray = tags.Split(";");
-
-            if (extras is not null)
-            {
-                extrasDictionary = new Dictionary<string, string>();
-                foreach (string extraPair in extras.Split(";"))
-                {
-                    string[] extraPairSplit = extraPair.Split("=");
-                    if (extraPairSplit.Length != 2)
-                    {
-                        await ReplyAsync("Your syntax for one of the defined extras contains an error. Please make sure to use the correct syntax and try again.");
-                        return;
-                    }
-                    extrasDictionary[extraPairSplit[0]] = extraPairSplit[1];
-                }
-            }
-
-            if (!WebUtils.TryParseUri(url, out Uri? uri))
-            {
-                await ReplyAsync("The given string was not a valid HTTP/-S URL.");
-                return;
-            }
-
-            string tempFilePath = Path.Combine(fileService.GetTempDirectory(), Guid.NewGuid().ToString());
-
-            IUserMessage statusMessage = await ReplyAsync("Downloading media");
+            IUserMessage message = await ReplyAsync("Importing media...");
+            async Task onStatusUpdate(string msg) => await message.ModifyAsync(message => message.Content = msg);
             try
             {
-                await WebUtils.DownloadToDiskAsync(uri, tempFilePath);
-                await statusMessage.ModifyAsync(message => message.Content = "Extracting audio data from media");
-                byte[] data = await ffmpegService.ReadAudioAsync(tempFilePath);
-                if (data.Length == 0)
-                    await statusMessage.ModifyAsync(message => message.Content = "Sorry, I was not able to extract the audio of the given media file.");
-                else
-                {
-                    await library.Import(title, description, tagsArray, extrasDictionary, data);
-                    await statusMessage.ModifyAsync(message => message.Content = "Audio imported to the guild's audio library");
-                }
+                await WebUtils.ImportFromWebToLibraryStorage(library, url, title, description, tags, extras, onStatusUpdate);
             }
             catch (Exception e)
             {
-                Log.Error(e, "An exception occured while importing the media's audio stream from {url} into the AudioLibraryStorage of guild {guild}", url, Context.Guild.Id.ToString());
-                await statusMessage.ModifyAsync(message => message.Content = $"An error occured while importing the media into the audio library of your guild: {e.Message}");
-            }
-            finally
-            {
-                if (File.Exists(tempFilePath))
-                    File.Delete(tempFilePath);
+                Log.Error(e, "Error while trying to import media from {url} into AudioLibraryStorage of guild {guild}.", url, Context.Guild.Id.ToString());
+                await message.ModifyAsync(message => message.Content = $"Error while importing media: {e.Message}");
             }
         }
 
