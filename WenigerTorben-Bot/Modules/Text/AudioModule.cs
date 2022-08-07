@@ -132,7 +132,7 @@ public class AudioModule : ModuleBase<SocketCommandContext>
         }
 
         IStorage<LibraryStorageEntry<byte[]>>? storage = audioLibraryStorageService.Get(Context.Guild.Id.ToString());
-        if (storage is null || audioLibraryStorageService.Get(Context.Guild.Id.ToString()) is not ILibraryStorage<byte[]> library)
+        if (storage is null || audioLibraryStorageService.Get(Context.Guild.Id.ToString()) is not ILibraryStorage<byte[]> libraryStorage)
         {
             await ReplyAsync("Sorry, there is no audio library available for this guild into which I could import the audio.");
             return;
@@ -142,7 +142,7 @@ public class AudioModule : ModuleBase<SocketCommandContext>
 
         if (subcommand == "list" || subcommand == "ls")
         {
-            LibraryStorageEntry<byte[]>[] libraryStorageEntries = library.GetValues();
+            LibraryStorageEntry<byte[]>[] libraryStorageEntries = libraryStorage.GetValues();
 
             if (libraryStorageEntries.Length == 0)
             {
@@ -191,9 +191,10 @@ public class AudioModule : ModuleBase<SocketCommandContext>
         {
             IUserMessage message = await ReplyAsync("Importing media...");
             async Task onStatusUpdate(string msg) => await message.ModifyAsync(message => message.Content = msg);
+
             try
             {
-                await WebUtils.ImportFromWebToLibraryStorage(library, url, title, description, tags, extras, onStatusUpdate);
+                await WebUtils.ImportToLibraryStorage(libraryStorage, url, title, description, tags, extras, onStatusUpdate);
             }
             catch (Exception e)
             {

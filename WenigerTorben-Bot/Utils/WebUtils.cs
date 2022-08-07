@@ -45,10 +45,10 @@ public class WebUtils
         return buffer;
     }
 
-    public static async Task ImportFromWebToLibraryStorage(ILibraryStorage<byte[]>? library, string? url, string? title, string? description = null, string? tags = null, string? extras = null, Func<string, Task>? statusAction = null)
+    public static async Task ImportToLibraryStorage(ILibraryStorage<byte[]>? libraryStorage, string? url, string? title, string? description = null, string? tags = null, string? extras = null, Func<string, Task>? statusAction = null)
     {
-        if (library is null)
-            throw new ArgumentNullException(nameof(library), "Value of was null");
+        if (libraryStorage is null)
+            throw new ArgumentNullException(nameof(libraryStorage), "Value was null");
 
         if (string.IsNullOrWhiteSpace(url))
             throw new ArgumentNullException(nameof(url), "Value was null or an empty string");
@@ -108,7 +108,7 @@ public class WebUtils
                 throw new ArgumentException("The media at the given URL contained no audio to be extracted", nameof(url));
             else
             {
-                await library.Import(title, description, tagsArray, extrasDictionary, data);
+                await libraryStorage.Import(title, description, tagsArray, extrasDictionary, data);
                 if (statusAction is not null)
                     await statusAction("Audio imported to the library");
             }
