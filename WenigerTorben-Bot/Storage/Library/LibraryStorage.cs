@@ -26,7 +26,7 @@ public class LibraryStorage<T> : ConfigStorage<LibraryStorageEntry<T>>, ILibrary
         Directory.CreateDirectory(directoryPath);
     }
 
-    public async Task<LibraryStorageEntry<T>?> Import(string title, string? description, string[]? tags, Dictionary<string, string>? extras, T data, string? key = null)
+    public async Task<LibraryStorageEntry<T>?> ImportAsync(string title, string? description, string[]? tags, Dictionary<string, string>? extras, T data, string? key = null)
     {
         if (key is null)
             key = Guid.NewGuid().ToString();

@@ -1,8 +1,10 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Net.Http;
 using System.Threading.Tasks;
+using WenigerTorbenBot.Audio.AudioSource;
 using WenigerTorbenBot.Services;
 using WenigerTorbenBot.Services.FFmpeg;
 using WenigerTorbenBot.Services.File;
@@ -45,7 +47,7 @@ public class WebUtils
         return buffer;
     }
 
-    public static async Task ImportToLibraryStorage(ILibraryStorage<byte[]>? libraryStorage, string? url, string? title, string? description = null, string? tags = null, string? extras = null, Func<string, Task>? statusAction = null)
+    public static async Task ImportToLibraryStorageAsync(ILibraryStorage<byte[]>? libraryStorage, string? url, string? title, string? description = null, string? tags = null, string? extras = null)
     {
         if (libraryStorage is null)
             throw new ArgumentNullException(nameof(libraryStorage), "Value was null");
@@ -75,53 +77,10 @@ public class WebUtils
             }
         }
 
-        if (!TryParseUri(url, out Uri? uri))
-            throw new ArgumentException("Value was not a valid HTTP/-S URL", nameof(url));
-
-        IFileService? fileService = ServiceRegistry.Get<IFileService>();
-        if (fileService is null)
-            throw new Exception("FileService was null"); //TODO: Proper exception
-
-        IFFmpegService? ffmpegService = ServiceRegistry.Get<IFFmpegService>();
-        if (ffmpegService is null)
-            throw new Exception("FFmpegService was null"); //TODO: Proper exception
-
-        if (fileService.Status != ServiceStatus.Started)
-            throw new Exception($"FileService was not available. FileService status: {fileService.Status}."); //TODO: Proper exception
-
-        if (ffmpegService.Status != ServiceStatus.Started)
-            throw new Exception($"FFmpegService was not available. FFmpegService status: {ffmpegService.Status}."); //TODO: Proper exception
-
-        string tempFilePath = Path.Combine(fileService.GetTempDirectory(), Guid.NewGuid().ToString());
-
-        try
-        {
-            if (statusAction is not null)
-                await statusAction("Downloading media");
-            await DownloadToDiskAsync(uri, tempFilePath);
-
-            if (statusAction is not null)
-                await statusAction("Extracting audio data from media");
-            byte[] data = await ffmpegService.ReadAudioAsync(tempFilePath);
-
-            if (data.Length == 0)
-                throw new ArgumentException("The media at the given URL contained no audio to be extracted", nameof(url));
-            else
-            {
-                await libraryStorage.Import(title, description, tagsArray, extrasDictionary, data);
-                if (statusAction is not null)
-                    await statusAction("Audio imported to the library");
-            }
-        }
-        catch (Exception)
-        {
-            throw;
-        }
-        finally
-        {
-            if (File.Exists(tempFilePath))
-                File.Delete(tempFilePath);
-        }
+        WebAudioSource webAudioSource = new WebAudioSource(url);
+        await webAudioSource.WhenPrepared();
+        byte[] data = webAudioSource.GetData().ToArray(); //TOOD: Optimize, this currently creates a copy of the audio data in RAM
+        await libraryStorage.ImportAsync(title, description, tagsArray, extrasDictionary, data);
     }
 
     public static bool TryParseUri(string uriString, out Uri? uri) => Uri.TryCreate(uriString, UriKind.Absolute, out uri) && (uri.Scheme == Uri.UriSchemeHttp || uri.Scheme == Uri.UriSchemeHttps);

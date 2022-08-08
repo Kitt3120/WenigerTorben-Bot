@@ -55,7 +55,7 @@ public class AudioModule : ModuleBase<SocketCommandContext>
 
         AudioRequest audioRequest = new AudioRequest(guildUser, null, textChannel, request, audioSource);
 
-        audioRequest.AudioSource.Prepare();
+        audioRequest.AudioSource.BeginPrepare();
         audioService.Enqueue(audioRequest);
 
         audioService.GetAudioSession(Context.Guild).Start();
@@ -78,7 +78,6 @@ public class AudioModule : ModuleBase<SocketCommandContext>
         audioService.Pause(Context.Guild);
         Log.Debug("AudioSession for Guild {guild} paused by user {user}", Context.Guild.Id, Context.User.Id);
         await ReplyAsync("Audio session paused");
-
     }
 
     [Command("resume")]
@@ -150,56 +149,52 @@ public class AudioModule : ModuleBase<SocketCommandContext>
                 return;
             }
 
-            try
+            List<EmbedFieldBuilder> embedFields = new List<EmbedFieldBuilder>();
+            foreach (LibraryStorageEntry<byte[]> libraryStorageEntry in libraryStorageEntries)
             {
-                List<EmbedFieldBuilder> embedFields = new List<EmbedFieldBuilder>();
-                foreach (LibraryStorageEntry<byte[]> libraryStorageEntry in libraryStorageEntries)
-                {
-                    EmbedFieldBuilder embedFieldBuilder = new EmbedFieldBuilder().WithName(libraryStorageEntry.Title);
-                    StringBuilder valueBuilder = new StringBuilder();
+                EmbedFieldBuilder embedFieldBuilder = new EmbedFieldBuilder().WithName(libraryStorageEntry.Title);
+                StringBuilder valueBuilder = new StringBuilder();
 
-                    if (libraryStorageEntry.Description is not null)
-                        valueBuilder.AppendLine(libraryStorageEntry.Description);
+                if (libraryStorageEntry.Description is not null)
+                    valueBuilder.AppendLine(libraryStorageEntry.Description);
 
-                    valueBuilder.AppendLine($"ID: {libraryStorageEntry.Id}");
+                valueBuilder.AppendLine($"ID: {libraryStorageEntry.Id}");
 
-                    if (libraryStorageEntry.Tags is not null)
-                        valueBuilder.AppendLine($"Tags: {string.Join(", ", libraryStorageEntry.Tags)}");
+                if (libraryStorageEntry.Tags is not null)
+                    valueBuilder.AppendLine($"Tags: {string.Join(", ", libraryStorageEntry.Tags)}");
 
-                    if (libraryStorageEntry.Extras is not null)
-                        foreach (KeyValuePair<string, string> extraPair in libraryStorageEntry.Extras)
-                            valueBuilder.AppendLine($"{extraPair.Key}: {extraPair.Value}");
+                if (libraryStorageEntry.Extras is not null)
+                    foreach (KeyValuePair<string, string> extraPair in libraryStorageEntry.Extras)
+                        valueBuilder.AppendLine($"{extraPair.Key}: {extraPair.Value}");
 
-                    embedFieldBuilder.WithValue(valueBuilder.ToString());
-                    embedFields.Add(embedFieldBuilder);
-                }
-
-                EmbedBuilder embedBuilder = new EmbedBuilder();
-                embedBuilder.WithTitle("Audios of this guild");
-                embedBuilder.WithColor(Color.Red);
-                embedBuilder.WithFields(embedFields);
-                await ReplyAsync(embed: embedBuilder.Build());
+                embedFieldBuilder.WithValue(valueBuilder.ToString());
+                embedFields.Add(embedFieldBuilder);
             }
-            catch (System.Exception)
-            {
-                await ReplyAsync("No");
-            }
+
+            EmbedBuilder embedBuilder = new EmbedBuilder();
+            embedBuilder.WithTitle("Audios of this guild");
+            embedBuilder.WithColor(Color.Red);
+            embedBuilder.WithFields(embedFields);
+            await ReplyAsync(embed: embedBuilder.Build());
+
         }
 
 
         else if (subcommand == "import" || subcommand == "add")
         {
             IUserMessage message = await ReplyAsync("Importing media...");
-            async Task onStatusUpdate(string msg) => await message.ModifyAsync(message => message.Content = msg);
 
             try
             {
-                await WebUtils.ImportToLibraryStorage(libraryStorage, url, title, description, tags, extras, onStatusUpdate);
+                await WebUtils.ImportToLibraryStorageAsync(libraryStorage, url, title, description, tags, extras);
+                await message.ModifyAsync(message => message.Content = "Media has been added to guild's audio library");
+                await Context.Message.AddReactionAsync(Emoji.Parse(":white_check_mark:"));
             }
             catch (Exception e)
             {
                 Log.Error(e, "Error while trying to import media from {url} into AudioLibraryStorage of guild {guild}.", url, Context.Guild.Id.ToString());
                 await message.ModifyAsync(message => message.Content = $"Error while importing media: {e.Message}");
+                await Context.Message.AddReactionAsync(Emoji.Parse(":x:"));
             }
         }
 

@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.IO;
 using System.Threading.Tasks;
 using Discord.WebSocket;
@@ -11,40 +13,42 @@ namespace WenigerTorbenBot.Audio.AudioSource;
 
 public abstract class AudioSource : IAudioSource
 {
-    protected SocketGuild guild;
-    protected string request;
+    protected readonly string request;
+    protected byte[] buffer;
     private readonly object preparationLock;
     private Task? preparationTask;
 
     public static IAudioSource? Create(SocketGuild guild, string request)
     {
         //TODO: When static abstract interface members are released in C#11, implement in a better way - https://docs.microsoft.com/en-us/dotnet/csharp/whats-new/tutorials/static-abstract-interface-methods
+        if (FileAudioSource.IsApplicableFor(request))
+            return new FileAudioSource(request);
+
+        if (WebAudioSource.IsApplicableFor(request))
+            return new WebAudioSource(request);
+
         if (AudioLibraryAudioSource.IsApplicableFor(guild, request))
             return new AudioLibraryAudioSource(guild, request);
-
-        if (FileAudioSource.IsApplicableFor(request))
-            return new FileAudioSource(guild, request);
 
         return null;
     }
 
-    public AudioSource(SocketGuild guild, string request)
+    public AudioSource(string request)
     {
-        this.guild = guild;
         this.request = request;
+        this.buffer = Array.Empty<byte>();
         this.preparationLock = new object();
     }
 
     protected abstract Task DoPrepareAsync();
-    protected abstract Task<Stream> DoProvideAsync();
 
-    public void Prepare()
+    public void BeginPrepare()
     {
         lock (preparationLock)
         {
             if (preparationTask is not null)
             {
-                Log.Warning("Prepare() was called multiple times on AudioSource of type {audioSourceType} for request {request}. Multiple executions of Prepare() have been prevented.", GetAudioSourceType(), request);
+                Log.Warning("BeginPrepare() was called multiple times on AudioSource of type {audioSourceType} for request {request}. Multiple executions of BeginPrepare() have been prevented.", GetAudioSourceType(), request);
                 return;
             }
 
@@ -52,27 +56,24 @@ public abstract class AudioSource : IAudioSource
         }
     }
 
-    public async Task<Stream> ProvideAsync()
+    public async Task WhenPrepared()
     {
         if (preparationTask is null)
-            throw new Exception($"Tried to access AudioSource of type {GetAudioSourceType()} for request {request} but it hasn't been prepared yet. Did you call Prepare() first?"); //TODO: Proper exception
-
-        try
         {
-            await preparationTask;
-        }
-        catch (Exception e)
-        {
-            throw new Exception($"Error while preparing AudioSource of type {GetAudioSourceType()} for request {request}.", e);
+            Log.Debug("WhenPrepared() was called before BeginPrepare() on AudioSource of type {audioSourceType} for request {request}. Calling BeginPrepare() first.", GetAudioSourceType(), request);
+            BeginPrepare();
         }
 
-        return await DoProvideAsync();
+        await preparationTask;
     }
 
-    public async Task WriteToAsync(Stream stream)
+    public IReadOnlyCollection<byte> GetData() => Array.AsReadOnly(buffer);
+
+    public MemoryStream GetStream() => new MemoryStream(buffer, false);
+
+    public async Task CopyToAsync(Stream stream)
     {
-        using Stream source = await ProvideAsync();
-        source.CopyTo(stream);
+        using Stream source = GetStream();
         await source.CopyToAsync(stream);
     }
 

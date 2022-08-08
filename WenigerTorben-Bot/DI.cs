@@ -46,7 +46,7 @@ public class DI
         AudioLibraryStorageService audioLibraryStorageService = new AudioLibraryStorageService(fileService);
         FFmpegService ffmpegService = new FFmpegService(fileService);
         DiscordService discordService = new DiscordService(standardConfigStorageService);
-        AudioService audioService = new AudioService(fileService, ffmpegService, discordService);
+        AudioService audioService = new AudioService(fileService, discordService);
         FancyMuteService fancyMuteService = new FancyMuteService(discordService);
         SetupService setupService = new SetupService(inputHandler, standardConfigStorageService, discordService);
 

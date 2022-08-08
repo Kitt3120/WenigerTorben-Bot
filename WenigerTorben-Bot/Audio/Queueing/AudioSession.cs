@@ -23,17 +23,14 @@ public class AudioSession : IAudioSession
 {
     public IGuild Guild { get; private set; }
 
-    private readonly IFFmpegService ffmpegService;
-
     private readonly object queueLock;
     private readonly List<AudioRequest> queue;
     private readonly ManualResetEvent queueThreadPause;
     private Thread? queueThread;
 
-    public AudioSession(IGuild guild, IFFmpegService ffmpegService)
+    public AudioSession(IGuild guild)
     {
         Guild = guild;
-        this.ffmpegService = ffmpegService;
 
         queueLock = new object();
         queueThreadPause = new ManualResetEvent(true);
@@ -86,16 +83,11 @@ public class AudioSession : IAudioSession
 
     public void Resume() => queueThreadPause.Set();
 
-    public void HandleQueue()
+    public async void HandleQueue()
     {
         while (true)
         {
             queueThreadPause.WaitOne();
-            if (ffmpegService.Status != ServiceStatus.Started)
-            {
-                Log.Error("Trying to handle AudioRequest in AudioSession queue for guild {guildId}, but FFmpegService has Status {ffmpegServiceStatus}.", Guild.Id, ffmpegService.Status);
-                break;
-            }
 
             IReadOnlyCollection<AudioRequest> currentQueue = GetQueue();
             if (!currentQueue.Any())
@@ -110,9 +102,8 @@ public class AudioSession : IAudioSession
                 continue;
             }
 
-
-            using Stream audioStream = audioRequest.AudioSource.ProvideAsync().GetAwaiter().GetResult();
-            //TODO: Error handling
+            await audioRequest.AudioSource.WhenPrepared(); //TODO: Error handling
+            using MemoryStream audioStream = audioRequest.AudioSource.GetStream();
 
             int bitrate = 96000;
             int bufferMillis = 1000;
@@ -135,6 +126,7 @@ public class AudioSession : IAudioSession
             catch (Exception e)
             {
                 Log.Error(e, "Error while streaming audio of request {audioRequest}. Skipping entry.", audioRequest);
+                await audioRequest.OriginChannel.SendMessageAsync($"{audioRequest.Requestor.Mention}, an error occured while playing your requested media: {e.Message}\nYour request will be skipped. Sorry about that!");
             }
             finally
             {

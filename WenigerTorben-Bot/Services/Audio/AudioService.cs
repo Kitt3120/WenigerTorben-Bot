@@ -15,16 +15,14 @@ public class AudioService : Service, IAudioService
     public override ServicePriority Priority => ServicePriority.Optional;
 
     private readonly IFileService fileService;
-    private readonly IFFmpegService ffmpegService;
     private readonly IDiscordService discordService;
 
     private readonly object audioSessionsLock;
     private readonly Dictionary<IGuild, IAudioSession> audioSessions;
 
-    public AudioService(IFileService fileService, IFFmpegService ffmpegService, IDiscordService discordService)
+    public AudioService(IFileService fileService, IDiscordService discordService)
     {
         this.fileService = fileService;
-        this.ffmpegService = ffmpegService;
         this.discordService = discordService;
 
         this.audioSessionsLock = new object();
@@ -35,9 +33,6 @@ public class AudioService : Service, IAudioService
     {
         if (fileService.Status != ServiceStatus.Started)
             throw new Exception($"FileService is not available. FileService status: {fileService.Status}."); //TODO: Proper exception
-
-        if (ffmpegService.Status != ServiceStatus.Started)
-            throw new Exception($"FFmpegService is not available. FFmpegService status: {ffmpegService.Status}."); //TODO: Proper exception
 
         if (discordService.Status != ServiceStatus.Started)
             throw new Exception($"DiscordService is not available. DiscordService status: {discordService.Status}."); //TODO: Proper exception
@@ -63,7 +58,7 @@ public class AudioService : Service, IAudioService
             if (audioSessions.ContainsKey(guild))
                 return audioSessions[guild];
 
-            IAudioSession audioSession = new AudioSession(guild, ffmpegService);
+            IAudioSession audioSession = new AudioSession(guild);
             audioSessions[guild] = audioSession;
             return audioSession;
         }

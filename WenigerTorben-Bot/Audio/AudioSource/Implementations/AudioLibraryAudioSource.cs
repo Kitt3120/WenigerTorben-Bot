@@ -15,20 +15,22 @@ namespace WenigerTorbenBot.Audio.AudioSource.Implementations;
 
 public class AudioLibraryAudioSource : AudioSource
 {
-    public override AudioSourceType GetAudioSourceType() => AudioSourceType.Library;
+    private readonly SocketGuild guild;
 
-    private byte[] buffer;
+    internal static bool IsApplicableFor(SocketGuild guild, string request) => GetLibraryStorageEntry(guild, request) is not null;
 
-    public AudioLibraryAudioSource(SocketGuild guild, string request) : base(guild, request)
+    public AudioLibraryAudioSource(SocketGuild guild, string request) : base(request)
     {
-        buffer = Array.Empty<byte>();
+        this.guild = guild;
     }
+
+    public override AudioSourceType GetAudioSourceType() => AudioSourceType.Library;
 
     protected override async Task DoPrepareAsync()
     {
         LibraryStorageEntry<byte[]>? libraryStorageEntry = GetLibraryStorageEntry(guild, request);
         if (libraryStorageEntry is null)
-            throw new Exception($"Unable to prepare AudioLibraryAudioSource because no LibraryStorageEntry was found for guild {guild} and request \"{request}\". Did you call IsApplicableFor() first?"); //TODO: Proper exception
+            throw new Exception($"No LibraryStorageEntry was found for guild {guild} and request \"{request}\". Did you call IsApplicableFor() first?"); //TODO: Proper exception
 
         byte[]? data;
         try
@@ -37,15 +39,13 @@ public class AudioLibraryAudioSource : AudioSource
         }
         catch (Exception e)
         {
-            throw new Exception("Unable to prepare AudioLibraryAudioSource because there was an error while reading the data from disk.", e); //TODO: Proper exception
+            throw new Exception("There was an error while reading the data from disk.", e); //TODO: Proper exception
         }
         if (data is null)
-            throw new Exception("Unable to prepare AudioLibraryAudioSource because the desiralized data was not a byte[]."); //TODO: Proper exception
+            throw new Exception("The desiralized data was null."); //TODO: Proper exception
 
         buffer = data;
     }
-
-    protected override async Task<Stream> DoProvideAsync() => await Task.Run(() => new MemoryStream(buffer));
 
     private static LibraryStorageEntry<byte[]>? GetLibraryStorageEntry(SocketGuild guild, string request)
     {
@@ -69,5 +69,4 @@ public class AudioLibraryAudioSource : AudioSource
         return null;
     }
 
-    internal static bool IsApplicableFor(SocketGuild guild, string request) => GetLibraryStorageEntry(guild, request) is not null;
 }
