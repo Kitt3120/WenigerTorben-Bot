@@ -32,7 +32,7 @@ public class WebAudioSource : AudioSource
             throw new Exception($"FFmpegService was not available. FFmpegService status: {ffmpegService.Status}"); //TODO: Proper exception
 
         if (!WebUtils.TryParseUri(request, out Uri? uri) || uri is null)
-            throw new ArgumentException("Value was not a valid HTTP/-S URL. Was IsApplicableFor() called first?", nameof(request));
+            throw new ArgumentException("Value was not a valid HTTP/-S URL."); //Parameter not specified here because it could confuse users when it ends up in a message sent back to one
 
         string tempFilePath = Path.Combine(fileService.GetTempDirectory(), Guid.NewGuid().ToString());
         try

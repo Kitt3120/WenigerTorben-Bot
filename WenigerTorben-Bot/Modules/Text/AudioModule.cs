@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Net.Http;
 using System.Text;
 using System.Threading.Tasks;
 using Discord;
@@ -188,22 +189,18 @@ public class AudioModule : ModuleBase<SocketCommandContext>
             {
                 await WebUtils.ImportToLibraryStorageAsync(libraryStorage, url, title, description, tags, extras);
                 await message.ModifyAsync(message => message.Content = "Media has been added to guild's audio library");
-                await Context.Message.AddReactionAsync(Emoji.Parse(":white_check_mark:"));
             }
             catch (Exception e)
             {
-                Log.Error(e, "Error while trying to import media from {url} into AudioLibraryStorage of guild {guild}.", url, Context.Guild.Id.ToString());
+                if (!(e is ArgumentException || e is HttpRequestException))
+                    Log.Error(e, "Error while trying to import media from {url} into AudioLibraryStorage of guild {guild}.", url, Context.Guild.Id.ToString());
                 await message.ModifyAsync(message => message.Content = $"Error while importing media: {e.Message}");
-                await Context.Message.AddReactionAsync(Emoji.Parse(":x:"));
             }
         }
 
 
         else
             await ReplyAsync($"Unknown subcommand: {subcommand}");
-
-
-
     }
 
 }
