@@ -15,6 +15,7 @@ using WenigerTorbenBot.Services.Storage.Config.Guild;
 using WenigerTorbenBot.Services.Storage.Library;
 using WenigerTorbenBot.Services.Storage.Library.Audio;
 using WenigerTorbenBot.Services.Storage.Persistent;
+using WenigerTorbenBot.Services.YouTube;
 using WenigerTorbenBot.Storage.Config;
 
 namespace WenigerTorbenBot;
@@ -45,6 +46,7 @@ public class DI
         StandardLibraryStorageService standardLibraryStorageService = new StandardLibraryStorageService(fileService);
         AudioLibraryStorageService audioLibraryStorageService = new AudioLibraryStorageService(fileService);
         FFmpegService ffmpegService = new FFmpegService(fileService);
+        YouTubeService youTubeService = new YouTubeService(fileService);
         DiscordService discordService = new DiscordService(standardConfigStorageService);
         AudioService audioService = new AudioService(fileService, discordService);
         FancyMuteService fancyMuteService = new FancyMuteService(discordService);
@@ -61,6 +63,7 @@ public class DI
         .AddSingleton(standardLibraryStorageService)
         .AddSingleton(audioLibraryStorageService)
         .AddSingleton<IFFmpegService>(ffmpegService)
+        .AddSingleton<IYouTubeService>(youTubeService)
         .AddSingleton<IDiscordService>(discordService)
         .AddSingleton<IAudioService>(audioService)
         .AddSingleton<IFancyMuteService>(fancyMuteService)
