@@ -49,13 +49,10 @@ public class FFmpegService : Service, IFFmpegService
         Serilog.Log.Debug("Using FFMpeg at {ffmpegPath}", ffmpegPath);
     }
 
-    public Process GetProcess(string filepath, params string[] arguments)
+    public Process GetProcess(params string[] arguments)
     {
         if (Status != ServiceStatus.Started)
-            throw new Exception($"Process for file {filepath} requested but FFmpegService has Status {Status}."); //TODO: Proper exception
-
-        if (!System.IO.File.Exists(filepath))
-            throw new FileNotFoundException($"No file found at {filepath}.");
+            throw new Exception($"FFmpeg process requested but FFmpegService has Status {Status}."); //TODO: Proper exception
 
         Process? ffmpegProcess = Process.Start(new ProcessStartInfo
         {
