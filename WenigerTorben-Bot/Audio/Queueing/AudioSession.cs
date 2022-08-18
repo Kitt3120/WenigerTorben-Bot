@@ -5,6 +5,7 @@ using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
 using Discord;
@@ -91,18 +92,34 @@ public class AudioSession : IAudioSession
 
             IReadOnlyCollection<AudioRequest> currentQueue = GetQueue();
             if (!currentQueue.Any())
+            {
+                Pause();
                 break;
+            }
 
             AudioRequest audioRequest = currentQueue.First();
             IVoiceChannel? targetChannel = audioRequest.GetTargetChannel();
             if (targetChannel is null)
             {
-                audioRequest.OriginChannel.SendMessageAsync($"{audioRequest.Requestor.Mention}, I was not able to determine the voice channel you're in. Your request will be skipped.").GetAwaiter().GetResult();
+                await audioRequest.OriginChannel.SendMessageAsync($"Sorry {audioRequest.Requestor.Mention}, I was not able to determine the voice channel you're in. Your request will be skipped.");
                 Dequeue(audioRequest);
                 continue;
             }
 
-            await audioRequest.AudioSource.WhenPrepared(); //TODO: Error handling
+            try
+            {
+                await audioRequest.AudioSource.WhenPrepared();
+            }
+            catch (Exception e)
+            {
+                if (e is not ArgumentException && e is not HttpRequestException)
+                    Log.Error(e, "An error occured while preparing an AudioSource.\nRequest: {request}.", audioRequest.Request);
+
+                await audioRequest.OriginChannel.SendMessageAsync($"Sorry {audioRequest.Requestor.Mention}, there was an error while playing your requested audio: {e.Message}.\nYour request will be skipped.");
+                Dequeue(audioRequest);
+                continue;
+            }
+
             using MemoryStream audioStream = audioRequest.AudioSource.GetStream();
 
             int bitrate = 96000;
@@ -130,8 +147,8 @@ public class AudioSession : IAudioSession
             }
             finally
             {
-                voiceStream.Flush();
-                audioClient.StopAsync().GetAwaiter().GetResult(); //Sometimes the bot does not leave voice channels when disposing audioClient. Maybe this fixes it.
+                await voiceStream.FlushAsync();
+                await audioClient.StopAsync(); //Sometimes the bot does not leave voice channels when disposing audioClient. Maybe this fixes it.
                 Dequeue(audioRequest);
             }
         }

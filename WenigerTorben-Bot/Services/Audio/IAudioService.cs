@@ -12,5 +12,6 @@ public interface IAudioService : IService
     int GetId(AudioRequest audioRequest);
     void Pause(IGuild guild);
     void Resume(IGuild guild);
+    void Start(IGuild guild);
     public IAudioSession GetAudioSession(IGuild guild);
 }

@@ -51,6 +51,8 @@ public class AudioService : Service, IAudioService
 
     public void Resume(IGuild guild) => GetAudioSession(guild).Resume();
 
+    public void Start(IGuild guild) => GetAudioSession(guild).Start();
+
     public IAudioSession GetAudioSession(IGuild guild)
     {
         lock (audioSessionsLock)

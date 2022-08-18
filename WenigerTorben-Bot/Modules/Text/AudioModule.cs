@@ -23,15 +23,11 @@ namespace WenigerTorbenBot.Modules.Text;
 [Summary("Module to manage a guild's audio session")]
 public class AudioModule : ModuleBase<SocketCommandContext>
 {
-    private readonly IFileService fileService;
-    private readonly IFFmpegService ffmpegService;
     private readonly IAudioService audioService;
     private readonly AudioLibraryStorageService audioLibraryStorageService;
 
-    public AudioModule(IFileService fileService, IFFmpegService ffmpegService, IAudioService audioService, AudioLibraryStorageService audioLibraryStorageService)
+    public AudioModule(IAudioService audioService, AudioLibraryStorageService audioLibraryStorageService)
     {
-        this.fileService = fileService;
-        this.ffmpegService = ffmpegService;
         this.audioService = audioService;
         this.audioLibraryStorageService = audioLibraryStorageService;
     }
@@ -50,7 +46,7 @@ public class AudioModule : ModuleBase<SocketCommandContext>
         IAudioSource? audioSource = AudioSource.Create(Context.Guild, request);
         if (audioSource is null)
         {
-            await ReplyAsync("Sorry, I don't know how to handle that request.");
+            await ReplyAsync($"Sorry {Context.User.Mention}, I don't know how to handle the given request");
             return;
         }
 
@@ -58,11 +54,10 @@ public class AudioModule : ModuleBase<SocketCommandContext>
 
         audioRequest.AudioSource.BeginPrepare();
         audioService.Enqueue(audioRequest);
-
-        audioService.GetAudioSession(Context.Guild).Start();
+        audioService.Start(Context.Guild);
 
         Log.Debug("AudioRequest {request} enqueued with AudioSourceType {audioSourceType}", request, audioSource.GetAudioSourceType());
-        await ReplyAsync("Request added to queue");
+        await ReplyAsync($"{Context.User.Mention}, your request has been added to the queue");
     }
 
     [Command("pause")]
@@ -134,7 +129,7 @@ public class AudioModule : ModuleBase<SocketCommandContext>
         IStorage<LibraryStorageEntry<byte[]>>? storage = audioLibraryStorageService.Get(Context.Guild.Id.ToString());
         if (storage is null || audioLibraryStorageService.Get(Context.Guild.Id.ToString()) is not ILibraryStorage<byte[]> libraryStorage)
         {
-            await ReplyAsync("Sorry, there is no audio library available for this guild into which I could import the audio.");
+            await ReplyAsync("Sorry, there is no audio library available for this guild into which I could import the audio");
             return;
         }
 
@@ -188,19 +183,19 @@ public class AudioModule : ModuleBase<SocketCommandContext>
             try
             {
                 await WebUtils.ImportToLibraryStorageAsync(libraryStorage, url, title, description, tags, extras);
-                await message.ModifyAsync(message => message.Content = "Media has been added to guild's audio library");
+                await message.ModifyAsync(message => message.Content = "Audio has been added to the guild's library");
             }
             catch (Exception e)
             {
-                if (!(e is ArgumentException || e is HttpRequestException))
+                if (e is not ArgumentException && e is not HttpRequestException)
                     Log.Error(e, "Error while trying to import media from {url} into AudioLibraryStorage of guild {guild}.", url, Context.Guild.Id.ToString());
-                await message.ModifyAsync(message => message.Content = $"Error while importing media: {e.Message}");
+                await message.ModifyAsync(message => message.Content = $"Sorry {Context.User.Mention}, an error occured while importing the audio: {e.Message}");
             }
         }
 
 
         else
-            await ReplyAsync($"Unknown subcommand: {subcommand}");
+            await ReplyAsync($"Sorry, you have entered an unknown subcommand: \"{subcommand}\"");
     }
 
 }
