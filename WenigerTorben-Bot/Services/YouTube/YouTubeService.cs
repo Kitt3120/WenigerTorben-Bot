@@ -3,6 +3,7 @@ using System.Diagnostics;
 using System.IO;
 using System.IO.Enumeration;
 using System.Linq;
+using System.Threading.Tasks;
 using WenigerTorbenBot.Services.File;
 using WenigerTorbenBot.Utils;
 
@@ -68,4 +69,10 @@ public class YouTubeService : Service, IYouTubeService
 
     protected override ServiceConfiguration CreateServiceConfiguration() => new ServiceConfigurationBuilder().Build();
 
+    public async Task<int> DownloadToDiskAsync(string url, string filepath)
+    {
+        Process? process = GetProcess("--geo-bypass", "--no-playlist", "-q", $"-o {filepath}", url);
+        await process.WaitForExitAsync();
+        return process.ExitCode;
+    }
 }
