@@ -233,14 +233,11 @@ public class AudioModule : ModuleBase<SocketCommandContext>
 
             Log.Debug("Using AudioSource of type {audioSourceType} for request {url} by {user} on Guild {guild}.", audioSource.GetAudioSourceType(), url, Context.User.Id, Context.Guild.Id);
 
-            await audioSource.WhenPrepared();
-            byte[] data = audioSource.GetData().ToArray(); //TOOD: Optimize, this currently creates a copy of the audio data in RAM
-            await libraryStorage.ImportAsync(title, description, tagsArray, extrasDictionary, data);
-
             try
             {
-                await WebUtils.ImportToLibraryStorageAsync(libraryStorage, url, title, description, tags, extras);
-                await message.ModifyAsync(message => message.Content = "Audio has been added to the guild's library");
+                await audioSource.WhenPrepared();
+                byte[] data = audioSource.GetData().ToArray(); //TOOD: Optimize, this currently creates a copy of the audio data in RAM
+                await libraryStorage.ImportAsync(title, description, tagsArray, extrasDictionary, data); await message.ModifyAsync(message => message.Content = "Audio has been added to the guild's library");
             }
             catch (Exception e)
             {
