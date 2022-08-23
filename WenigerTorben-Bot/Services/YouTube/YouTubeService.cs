@@ -67,12 +67,16 @@ public class YouTubeService : Service, IYouTubeService
         return youtubeDlProcess;
     }
 
-    protected override ServiceConfiguration CreateServiceConfiguration() => new ServiceConfigurationBuilder().Build();
-
-    public async Task<int> DownloadToDiskAsync(string url, string filepath)
+    public async Task<int> DownloadToDiskAsync(Uri uri, string filepath)
     {
-        Process? process = GetProcess("--geo-bypass", "--no-playlist", "-q", $"-o {filepath}", url);
+        string folder = Path.GetDirectoryName(filepath);
+        string extension = Path.GetExtension(filepath).Substring(1);
+        string filepathWithoutExtension = Path.GetFileNameWithoutExtension(filepath);
+
+        using Process? process = GetProcess("--geo-bypass", "--no-playlist", $"--remux-video {extension}", $"-o {Path.Combine(folder, filepathWithoutExtension)}", $"\"{uri.AbsoluteUri}\"");
         await process.WaitForExitAsync();
         return process.ExitCode;
     }
+
+    protected override ServiceConfiguration CreateServiceConfiguration() => new ServiceConfigurationBuilder().Build();
 }

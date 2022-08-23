@@ -1,21 +1,22 @@
 using System;
 using System.IO;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
-using Discord.WebSocket;
 using WenigerTorbenBot.Services;
 using WenigerTorbenBot.Services.FFmpeg;
 using WenigerTorbenBot.Services.File;
+using WenigerTorbenBot.Services.YouTube;
 using WenigerTorbenBot.Utils;
 
 namespace WenigerTorbenBot.Audio.AudioSource;
 
-public class WebAudioSource : AudioSource
+public class YouTubeAudioSource : AudioSource
 {
-    public static bool IsApplicableFor(string request) => request.ToLower().StartsWith("http://") || request.ToLower().StartsWith("https://");
+    public static bool IsApplicableFor(string request) => Regex.IsMatch(request, "^((?:https?:)?\\/\\/)?((?:www|m)\\.)?((?:youtube(-nocookie)?\\.com|youtu.be))(\\/(?:[\\w\\-]+\\?v=|embed\\/|v\\/)?)([\\w\\-]+)(\\S+)?$");
 
-    public override AudioSourceType GetAudioSourceType() => AudioSourceType.Web;
+    public override AudioSourceType GetAudioSourceType() => AudioSourceType.YouTube;
 
-    public WebAudioSource(string request) : base(request)
+    public YouTubeAudioSource(string request) : base(request)
     { }
 
     protected override async Task DoPrepareAsync()
@@ -32,13 +33,19 @@ public class WebAudioSource : AudioSource
         if (ffmpegService.Status != ServiceStatus.Started)
             throw new Exception($"FFmpegService was not available. FFmpegService status: {ffmpegService.Status}"); //TODO: Proper exception
 
+        IYouTubeService? youTubeService = ServiceRegistry.Get<IYouTubeService>();
+        if (youTubeService is null)
+            throw new Exception("YouTubeService was null"); //TODO: Proper exception
+        if (youTubeService.Status != ServiceStatus.Started)
+            throw new Exception($"YouTubeService was not available. YouTubeService status: {youTubeService.Status}"); //TODO: Proper exception
+
         if (!WebUtils.TryParseUri(request, out Uri? uri) || uri is null)
             throw new ArgumentException("Value was not a valid HTTP/-S URL"); //Parameter not specified here because it could confuse users when it ends up in a message sent back to one
 
-        string tempFilePath = fileService.GetTempPath();
+        string tempFilePath = $"{fileService.GetTempPath()}.mkv";
         try
         {
-            await WebUtils.DownloadToDiskAsync(uri, tempFilePath);
+            await youTubeService.DownloadToDiskAsync(uri, tempFilePath);
             byte[] data = await ffmpegService.ReadAudioAsync(tempFilePath);
 
             if (data.Length == 0)

@@ -23,14 +23,14 @@ public abstract class AudioSource : IAudioSource
         //TODO: When static abstract interface members are released in C#11, implement in a better way - https://docs.microsoft.com/en-us/dotnet/csharp/whats-new/tutorials/static-abstract-interface-methods
         if (FileAudioSource.IsApplicableFor(request))
             return new FileAudioSource(request);
-
-        if (WebAudioSource.IsApplicableFor(request))
+        else if (YouTubeAudioSource.IsApplicableFor(request))
+            return new YouTubeAudioSource(request);
+        else if (WebAudioSource.IsApplicableFor(request))
             return new WebAudioSource(request);
-
-        if (AudioLibraryAudioSource.IsApplicableFor(guild, request))
+        else if (AudioLibraryAudioSource.IsApplicableFor(guild, request))
             return new AudioLibraryAudioSource(guild, request);
-
-        return null;
+        else
+            return null;
     }
 
     public AudioSource(string request)
@@ -58,7 +58,11 @@ public abstract class AudioSource : IAudioSource
 
     public async Task WhenPrepared()
     {
-        if (preparationTask is null)
+        bool isPreparationTaskNull;
+        lock (preparationLock)
+            isPreparationTaskNull = preparationTask is null;
+
+        if (isPreparationTaskNull)
         {
             Log.Debug("WhenPrepared() was called before BeginPrepare() on AudioSource of type {audioSourceType} for request {request}. Calling BeginPrepare() first.", GetAudioSourceType(), request);
             BeginPrepare();
@@ -69,13 +73,9 @@ public abstract class AudioSource : IAudioSource
 
     public IReadOnlyCollection<byte> GetData() => Array.AsReadOnly(buffer);
 
-    public MemoryStream GetStream() => new MemoryStream(buffer, false);
+    public MemoryStream CreateStream() => new MemoryStream(buffer, false);
 
-    public async Task CopyToAsync(Stream stream)
-    {
-        using Stream source = GetStream();
-        await source.CopyToAsync(stream);
-    }
+    public async Task WriteAsync(Stream stream) => await stream.WriteAsync(buffer);
 
     public abstract AudioSourceType GetAudioSourceType();
 }

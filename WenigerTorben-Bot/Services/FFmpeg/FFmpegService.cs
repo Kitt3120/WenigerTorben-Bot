@@ -70,7 +70,7 @@ public class FFmpegService : Service, IFFmpegService
 
     public async Task StreamAudioAsync(string filepath, Stream stream)
     {
-        using Process process = GetProcess(filepath, "-hide_banner", "-loglevel panic", $"-i \"{filepath}\"", "-ac 2", "-f s16le", "-ar 48000", "pipe:1");
+        using Process process = GetProcess("-hide_banner", "-loglevel panic", $"-i \"{filepath}\"", "-ac 2", "-f s16le", "-ar 48000", "pipe:1");
         await process.StandardOutput.BaseStream.CopyToAsync(stream);
     }
 

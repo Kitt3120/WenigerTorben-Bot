@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.ComponentModel;
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Linq;
 using System.Net.Http;
@@ -26,16 +27,22 @@ public class AudioSession : IAudioSession
 
     private readonly object queueLock;
     private readonly List<AudioRequest> queue;
-    private readonly ManualResetEvent queueThreadPause;
-    private Thread? queueThread;
+    private readonly ManualResetEvent pauseEvent;
+    private readonly object autoPauseLock;
+    private bool autoPaused;
+    private readonly Thread queueThread;
 
     public AudioSession(IGuild guild)
     {
         Guild = guild;
 
         queueLock = new object();
-        queueThreadPause = new ManualResetEvent(true);
         queue = new List<AudioRequest>();
+        pauseEvent = new ManualResetEvent(false);
+        autoPauseLock = new object();
+        autoPaused = true;
+        queueThread = new Thread(HandleQueue);
+        queueThread.Start();
     }
 
     public int Enqueue(AudioRequest audioRequest)
@@ -43,6 +50,13 @@ public class AudioSession : IAudioSession
         lock (queueLock)
             if (!queue.Contains(audioRequest))
                 queue.Add(audioRequest);
+
+        bool wasAutoPaused;
+        lock (autoPauseLock)
+            wasAutoPaused = autoPaused;
+
+        if (wasAutoPaused)
+            Resume();
 
         return GetId(audioRequest);
     }
@@ -69,32 +83,35 @@ public class AudioSession : IAudioSession
             return queue.IndexOf(audioRequest);
     }
 
-    public void Start()
+    public void Pause(bool autoPause = false)
     {
-        if (queueThread is null || !queueThread.IsAlive)
+        lock (autoPauseLock)
         {
-            queueThread = new Thread(HandleQueue);
-            Resume();
-            queueThread.Start();
+            autoPaused = autoPause;
+            pauseEvent.Reset();
         }
-        else Resume();
     }
 
-    public void Pause() => queueThreadPause.Reset();
-
-    public void Resume() => queueThreadPause.Set();
+    public void Resume()
+    {
+        lock (autoPauseLock)
+        {
+            autoPaused = false;
+            pauseEvent.Set();
+        }
+    }
 
     public async void HandleQueue()
     {
         while (true)
         {
-            queueThreadPause.WaitOne();
+            pauseEvent.WaitOne();
 
             IReadOnlyCollection<AudioRequest> currentQueue = GetQueue();
             if (!currentQueue.Any())
             {
-                Pause();
-                break;
+                Pause(true);
+                continue;
             }
 
             AudioRequest audioRequest = currentQueue.First();
@@ -120,7 +137,7 @@ public class AudioSession : IAudioSession
                 continue;
             }
 
-            using MemoryStream audioStream = audioRequest.AudioSource.GetStream();
+            using MemoryStream audioStream = audioRequest.AudioSource.CreateStream();
 
             int bitrate = 96000;
             int bufferMillis = 1000;
@@ -134,21 +151,20 @@ public class AudioSession : IAudioSession
                 int read;
                 while ((read = audioStream.Read(buffer, 0, bufferSize)) > 0)
                 {
-                    queueThreadPause.WaitOne(); //Pause if pause requested
-
+                    pauseEvent.WaitOne();
                     voiceStream.Write(buffer, 0, bufferSize); //Plays stream in splitted parts, so a pause in between every part is possible
                     Thread.Sleep((bufferSize * 8) / (bitrate * bufferMillis));
                 }
             }
             catch (Exception e)
             {
-                Log.Error(e, "Error while streaming audio of request {audioRequest}. Skipping entry.", audioRequest);
+                Log.Error(e, "Error while streaming audio of request {audioRequest} to channel {channel} in guild {guild}. Skipping entry.", audioRequest.Request, audioRequest.GetTargetChannel(), audioRequest.GetTargetChannel().Guild.Id);
                 await audioRequest.OriginChannel.SendMessageAsync($"{audioRequest.Requestor.Mention}, an error occured while playing your requested media: {e.Message}\nYour request will be skipped. Sorry about that!");
             }
             finally
             {
                 await voiceStream.FlushAsync();
-                await audioClient.StopAsync(); //Sometimes the bot does not leave voice channels when disposing audioClient. Maybe this fixes it.
+                await audioClient.StopAsync();
                 Dequeue(audioRequest);
             }
         }

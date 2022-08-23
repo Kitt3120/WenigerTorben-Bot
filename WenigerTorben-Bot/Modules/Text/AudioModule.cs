@@ -1,8 +1,10 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Net.Http;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using Discord;
 using Discord.Commands;
@@ -35,11 +37,17 @@ public class AudioModule : ModuleBase<SocketCommandContext>
     [Command("play")]
     [Alias(new string[] { "p", "pl" })]
     [Summary("Enqueues an audio request")]
-    public async Task Play(string request)
+    public async Task Play(string? request = null)
     {
         if (Context.User is not IGuildUser guildUser || Context.Channel is not ITextChannel textChannel)
         {
             await ReplyAsync("This command is only available on guilds");
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(request))
+        {
+            await ReplyAsync("Sorry, you actually did not request any media I should play. Try again!");
             return;
         }
 
@@ -54,7 +62,6 @@ public class AudioModule : ModuleBase<SocketCommandContext>
 
         audioRequest.AudioSource.BeginPrepare();
         audioService.Enqueue(audioRequest);
-        audioService.Start(Context.Guild);
 
         Log.Debug("AudioRequest {request} enqueued with AudioSourceType {audioSourceType}", request, audioSource.GetAudioSourceType());
         await ReplyAsync($"{Context.User.Mention}, your request has been added to the queue");
@@ -178,7 +185,57 @@ public class AudioModule : ModuleBase<SocketCommandContext>
 
         else if (subcommand == "import" || subcommand == "add")
         {
+            if (string.IsNullOrWhiteSpace(url))
+            {
+                await ReplyAsync("You did not specify the URL I should download the media from");
+                return;
+                //throw new ArgumentNullException(nameof(url), "Value was null or an empty string");
+            }
+
+            if (string.IsNullOrWhiteSpace(title))
+            {
+                await ReplyAsync("You did not specify a title for the imported media");
+                return;
+                //throw new ArgumentNullException(nameof(title), "Value was null or an empty string");
+            }
+
+            string[]? tagsArray = null;
+            Dictionary<string, string>? extrasDictionary = null;
+
+            if (tags is not null)
+                tagsArray = tags.Split(";");
+
+            if (extras is not null)
+            {
+                extrasDictionary = new Dictionary<string, string>();
+                foreach (string extraPair in extras.Split(";"))
+                {
+                    string[] extraPairSplit = extraPair.Split("=");
+                    if (extraPairSplit.Length != 2)
+                    {
+                        await ReplyAsync("Syntax for one of the defined extra contained an error");
+                        return;
+                        //throw new ArgumentException("Syntax for one of the defined extras contained an error", nameof(extras));
+                    }
+
+                    extrasDictionary[extraPairSplit[0]] = extraPairSplit[1];
+                }
+            }
+
             IUserMessage message = await ReplyAsync("Importing media...");
+
+            IAudioSource? audioSource = AudioSource.Create(Context.Guild, url);
+            if (audioSource is null)
+            {
+                await ReplyAsync("No fitting AudioSource found for the given url");
+                return;
+            }
+
+            Log.Debug("Using AudioSource of type {audioSourceType} for request {url} by {user} on Guild {guild}.", audioSource.GetAudioSourceType(), url, Context.User.Id, Context.Guild.Id);
+
+            await audioSource.WhenPrepared();
+            byte[] data = audioSource.GetData().ToArray(); //TOOD: Optimize, this currently creates a copy of the audio data in RAM
+            await libraryStorage.ImportAsync(title, description, tagsArray, extrasDictionary, data);
 
             try
             {

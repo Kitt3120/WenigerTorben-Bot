@@ -11,10 +11,11 @@ public class FileAudioSource : AudioSource
 {
     public static bool IsApplicableFor(string request) => Path.IsPathFullyQualified(request) && File.Exists(request);
 
+    public override AudioSourceType GetAudioSourceType() => AudioSourceType.File;
+
     public FileAudioSource(string request) : base(request)
     { }
 
-    public override AudioSourceType GetAudioSourceType() => AudioSourceType.File;
 
     protected override async Task DoPrepareAsync()
     {

@@ -15,16 +15,16 @@ namespace WenigerTorbenBot.Audio.AudioSource.Implementations;
 
 public class AudioLibraryAudioSource : AudioSource
 {
-    private readonly SocketGuild guild;
+    public static bool IsApplicableFor(SocketGuild guild, string request) => GetLibraryStorageEntry(guild, request) is not null;
 
-    internal static bool IsApplicableFor(SocketGuild guild, string request) => GetLibraryStorageEntry(guild, request) is not null;
+    public override AudioSourceType GetAudioSourceType() => AudioSourceType.Library;
+
+    private readonly SocketGuild guild;
 
     public AudioLibraryAudioSource(SocketGuild guild, string request) : base(request)
     {
         this.guild = guild;
     }
-
-    public override AudioSourceType GetAudioSourceType() => AudioSourceType.Library;
 
     protected override async Task DoPrepareAsync()
     {

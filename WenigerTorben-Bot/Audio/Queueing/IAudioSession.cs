@@ -9,8 +9,7 @@ public interface IAudioSession
     void Dequeue(AudioRequest audioRequest);
     void Dequeue(int id);
     int GetId(AudioRequest audioRequest);
-    void Start();
-    void Pause();
+    void Pause(bool autoPause = false);
     void Resume();
     void HandleQueue();
     IReadOnlyCollection<AudioRequest> GetQueue();

@@ -10,7 +10,7 @@ public interface IAudioSource
     public void BeginPrepare();
     public Task WhenPrepared();
     public IReadOnlyCollection<byte> GetData();
-    public MemoryStream GetStream();
-    public Task CopyToAsync(Stream stream);
+    public MemoryStream CreateStream();
+    public Task WriteAsync(Stream stream);
     public AudioSourceType GetAudioSourceType();
 }

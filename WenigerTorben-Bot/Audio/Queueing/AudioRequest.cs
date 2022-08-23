@@ -21,7 +21,7 @@ namespace WenigerTorbenBot.Audio.Queueing
             AudioSource = audioSource;
         }
 
-        public IVoiceChannel? GetTargetChannel()
+        public IVoiceChannel GetTargetChannel()
         {
             if (VoiceChannel is not null)
                 return VoiceChannel;

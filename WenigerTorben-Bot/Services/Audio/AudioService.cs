@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using Discord;
+using Serilog;
 using WenigerTorbenBot.Audio.Queueing;
 using WenigerTorbenBot.Services.Discord;
 using WenigerTorbenBot.Services.FFmpeg;
@@ -50,8 +51,6 @@ public class AudioService : Service, IAudioService
     public void Pause(IGuild guild) => GetAudioSession(guild).Pause();
 
     public void Resume(IGuild guild) => GetAudioSession(guild).Resume();
-
-    public void Start(IGuild guild) => GetAudioSession(guild).Start();
 
     public IAudioSession GetAudioSession(IGuild guild)
     {
