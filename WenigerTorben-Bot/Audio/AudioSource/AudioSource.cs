@@ -25,10 +25,10 @@ public abstract class AudioSource : IAudioSource
             return new FileAudioSource(request);
         else if (YouTubeAudioSource.IsApplicableFor(request))
             return new YouTubeAudioSource(request);
-        else if (WebAudioSource.IsApplicableFor(request))
-            return new WebAudioSource(request);
         else if (AudioLibraryAudioSource.IsApplicableFor(guild, request))
             return new AudioLibraryAudioSource(guild, request);
+        else if (WebAudioSource.IsApplicableFor(request))
+            return new WebAudioSource(request);
         else
             return null;
     }

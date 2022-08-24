@@ -132,7 +132,7 @@ public class AudioSession : IAudioSession
                 if (e is not ArgumentException && e is not HttpRequestException)
                     Log.Error(e, "An error occured while preparing an AudioSource.\nRequest: {request}.", audioRequest.Request);
 
-                await audioRequest.OriginChannel.SendMessageAsync($"Sorry {audioRequest.Requestor.Mention}, there was an error while playing your requested audio: {e.Message}.\nYour request will be skipped.");
+                await audioRequest.OriginChannel.SendMessageAsync($"Sorry {audioRequest.Requestor.Mention}, there was an error while preparing your requested audio: {e.Message}\nYour request will be skipped. Sorry about that!");
                 Dequeue(audioRequest);
                 continue;
             }
@@ -159,7 +159,7 @@ public class AudioSession : IAudioSession
             catch (Exception e)
             {
                 Log.Error(e, "Error while streaming audio of request {audioRequest} to channel {channel} in guild {guild}. Skipping entry.", audioRequest.Request, audioRequest.GetTargetChannel(), audioRequest.GetTargetChannel().Guild.Id);
-                await audioRequest.OriginChannel.SendMessageAsync($"{audioRequest.Requestor.Mention}, an error occured while playing your requested media: {e.Message}\nYour request will be skipped. Sorry about that!");
+                await audioRequest.OriginChannel.SendMessageAsync($"Sorry {audioRequest.Requestor.Mention}, there was an error while playing your requested audio: {e.Message}\nYour request will be skipped. Sorry about that!");
             }
             finally
             {
