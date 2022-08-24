@@ -45,7 +45,7 @@ public class YouTubeAudioSource : AudioSource
         string tempFilePath = $"{fileService.GetTempPath()}.mkv";
         try
         {
-            await youTubeService.DownloadToDiskAsync(uri, tempFilePath);
+            await youTubeService.DownloadBestAudioAsync(uri.AbsoluteUri, tempFilePath);
             byte[] data = await ffmpegService.ReadAudioAsync(tempFilePath);
 
             if (data.Length == 0)
