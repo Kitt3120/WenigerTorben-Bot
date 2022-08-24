@@ -15,7 +15,7 @@ public class YouTubeService : Service, IYouTubeService
 
     public override ServicePriority Priority => ServicePriority.Optional;
 
-    private IFileService fileService;
+    private readonly IFileService fileService;
     private string? youtubeDlPath;
 
     public YouTubeService(IFileService fileService) : base()
@@ -25,8 +25,10 @@ public class YouTubeService : Service, IYouTubeService
 
     protected override void Initialize()
     {
-        string relativePath = fileService.GetAppDomainPath();
+        if (fileService.Status != ServiceStatus.Started)
+            throw new Exception($"FileService is not available. FileService status: {fileService.Status}."); //TODO: Proper exception
 
+        string relativePath = fileService.GetAppDomainPath();
         string? path = null;
         switch (PlatformUtils.GetOSPlatform())
         {
