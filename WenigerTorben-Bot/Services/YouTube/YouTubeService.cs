@@ -3,9 +3,13 @@ using System.Diagnostics;
 using System.IO;
 using System.IO.Enumeration;
 using System.Linq;
+using System.Runtime.Serialization;
 using System.Threading.Tasks;
 using WenigerTorbenBot.Services.File;
 using WenigerTorbenBot.Utils;
+using YoutubeExplode;
+using YoutubeExplode.Videos;
+using YoutubeExplode.Videos.Streams;
 
 namespace WenigerTorbenBot.Services.YouTube;
 
@@ -15,70 +19,73 @@ public class YouTubeService : Service, IYouTubeService
 
     public override ServicePriority Priority => ServicePriority.Optional;
 
-    private readonly IFileService fileService;
-    private string? youtubeDlPath;
+    private readonly YoutubeClient youtubeClient;
 
-    public YouTubeService(IFileService fileService) : base()
+    public YouTubeService() : base()
     {
-        this.fileService = fileService;
+        this.youtubeClient = new YoutubeClient();
     }
 
     protected override void Initialize()
+    { }
+
+    public async Task<Video> GetVideoAsync(string urlOrId) => await youtubeClient.Videos.GetAsync(urlOrId);
+
+    public async Task<StreamManifest> GetStreamManifestAsync(string urlOrId) => await youtubeClient.Videos.Streams.GetManifestAsync(urlOrId);
+
+    public Task<StreamManifest> GetStreamManifestAsync(Video video) => GetStreamManifestAsync(video.Url);
+
+    public async Task DownloadBestVideoAsync(string urlOrId, string filepath)
     {
-        if (fileService.Status != ServiceStatus.Started)
-            throw new Exception($"FileService is not available. FileService status: {fileService.Status}."); //TODO: Proper exception
-
-        string relativePath = fileService.GetAppDomainPath();
-        string? path = null;
-        switch (PlatformUtils.GetOSPlatform())
-        {
-            case PlatformID.Win32NT:
-                path = Path.Join(relativePath, "youtube-dl.exe");
-                if (!System.IO.File.Exists(path))
-                    throw new FileNotFoundException($"YouTube-DL binary not found at {path}");
-                youtubeDlPath = path;
-                break;
-            default:
-                string[] possiblePaths = new string[] { Path.Join(relativePath, "youtube-dl"), "/bin/youtube-dl", "/usr/bin/youtube-dl", "/sbin/youtube-dl", "/usr/sbin/youtube-dl" };
-
-                path = possiblePaths.FirstOrDefault(possiblePath => System.IO.File.Exists(possiblePath));
-                if (path is null)
-                    throw new FileNotFoundException($"YouTube-DL binary not found at {string.Join(", ", possiblePaths)}");
-                youtubeDlPath = path;
-                break;
-        }
-        Serilog.Log.Debug("Using YouTube-DL at {youtubeDlPath}", youtubeDlPath);
+        IVideoStreamInfo videoStreamInfo = (await GetStreamManifestAsync(urlOrId)).GetVideoOnlyStreams().GetWithHighestVideoQuality();
+        await youtubeClient.Videos.Streams.DownloadAsync(videoStreamInfo, filepath);
     }
 
-    public Process GetProcess(params string[] arguments)
+    public Task DownloadBestVideoAsync(Video video, string filepath) => DownloadBestVideoAsync(video.Url, filepath);
+
+    public async Task DownloadBestAudioAsync(string urlOrId, string filepath)
     {
-        if (Status != ServiceStatus.Started)
-            throw new Exception($"Process requested but YouTubeService has Status {Status}."); //TODO: Proper exception
-
-        Process? youtubeDlProcess = Process.Start(new ProcessStartInfo
-        {
-            FileName = youtubeDlPath,
-            Arguments = string.Join(" ", arguments),
-            UseShellExecute = false,
-            RedirectStandardOutput = true
-        });
-
-        if (youtubeDlProcess is null)
-            throw new Exception("The YouTube-DL process was null."); //TODO: Proper exception
-
-        return youtubeDlProcess;
+        IStreamInfo audioStreamInfo = (await GetStreamManifestAsync(urlOrId)).GetAudioOnlyStreams().GetWithHighestBitrate();
+        await youtubeClient.Videos.Streams.DownloadAsync(audioStreamInfo, filepath);
     }
 
-    public async Task<int> DownloadToDiskAsync(Uri uri, string filepath)
-    {
-        string folder = Path.GetDirectoryName(filepath);
-        string extension = Path.GetExtension(filepath).Substring(1);
-        string filepathWithoutExtension = Path.GetFileNameWithoutExtension(filepath);
+    public Task DownloadBestAudioAsync(Video video, string filepath) => DownloadBestAudioAsync(video.Url, filepath);
 
-        using Process? process = GetProcess("--geo-bypass", "--no-playlist", $"--remux-video {extension}", $"-o {Path.Combine(folder, filepathWithoutExtension)}", $"\"{uri.AbsoluteUri}\"");
-        await process.WaitForExitAsync();
-        return process.ExitCode;
+    public async Task DownloadBestMuxAsync(string urlOrId, string filepath)
+    {
+        IStreamInfo audioStreamInfo = (await GetStreamManifestAsync(urlOrId)).GetMuxedStreams().GetWithHighestVideoQuality();
+        await youtubeClient.Videos.Streams.DownloadAsync(audioStreamInfo, filepath);
     }
+
+    public Task DownloadBestMuxAsync(Video video, string filepath) => DownloadBestMuxAsync(video.Url, filepath);
+
+    public async Task DownloadAsync(IStreamInfo streamInfo, string filepath) => await youtubeClient.Videos.Streams.DownloadAsync(streamInfo, filepath);
+
+    public async Task StreamBestVideoAsync(string urlOrId, Stream output)
+    {
+        IVideoStreamInfo videoStreamInfo = (await GetStreamManifestAsync(urlOrId)).GetVideoOnlyStreams().GetWithHighestVideoQuality();
+        await youtubeClient.Videos.Streams.CopyToAsync(videoStreamInfo, output);
+    }
+
+    public Task StreamBestVideoAsync(Video video, Stream output) => StreamBestVideoAsync(video.Url, output);
+
+    public async Task StreamBestAudioAsync(string urlOrId, Stream output)
+    {
+        IStreamInfo audioStreamInfo = (await GetStreamManifestAsync(urlOrId)).GetMuxedStreams().GetWithHighestVideoQuality();
+        await youtubeClient.Videos.Streams.CopyToAsync(audioStreamInfo, output);
+    }
+
+    public Task StreamBestAudioAsync(Video video, Stream output) => StreamBestAudioAsync(video.Url, output);
+
+    public async Task StreamBestMuxAsync(string urlOrId, Stream output)
+    {
+        IStreamInfo audioStreamInfo = (await GetStreamManifestAsync(urlOrId)).GetMuxedStreams().GetWithHighestVideoQuality();
+        await youtubeClient.Videos.Streams.CopyToAsync(audioStreamInfo, output);
+    }
+
+    public Task StreamBestMuxAsync(Video video, Stream output) => StreamBestMuxAsync(video.Url, output);
+
+    public async Task StreamAsync(IStreamInfo streamInfo, Stream output) => await youtubeClient.Videos.Streams.CopyToAsync(streamInfo, output);
 
     protected override ServiceConfiguration CreateServiceConfiguration() => new ServiceConfigurationBuilder().Build();
 }

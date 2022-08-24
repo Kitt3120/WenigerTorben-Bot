@@ -36,6 +36,8 @@ public class DI
         Sadly, there is no option to have a ServiceProvider instantiate all singletons
         initially.
         */
+
+        //Core
         InputHandler inputHandler = new InputHandler();
         HealthService healthService = new HealthService();
         FileService fileService = new FileService();
@@ -45,12 +47,18 @@ public class DI
         StandardPersistentStorageService standardPersistentStorageService = new StandardPersistentStorageService(fileService);
         StandardLibraryStorageService standardLibraryStorageService = new StandardLibraryStorageService(fileService);
         AudioLibraryStorageService audioLibraryStorageService = new AudioLibraryStorageService(fileService);
+
+        //Core services
         FFmpegService ffmpegService = new FFmpegService(fileService);
-        YouTubeService youTubeService = new YouTubeService(fileService);
+        YouTubeService youTubeService = new YouTubeService();
         DiscordService discordService = new DiscordService(standardConfigStorageService);
+
+        //Feature related
         AudioService audioService = new AudioService(fileService, discordService);
         FancyMuteService fancyMuteService = new FancyMuteService(discordService);
-        SetupService setupService = new SetupService(inputHandler, standardConfigStorageService, discordService);
+
+        //Has to initialize at last service
+        SetupService setupService = new SetupService(inputHandler, standardConfigStorageService);
 
         ServiceProvider = new ServiceCollection()
         .AddSingleton<IInputHandler>(inputHandler)
