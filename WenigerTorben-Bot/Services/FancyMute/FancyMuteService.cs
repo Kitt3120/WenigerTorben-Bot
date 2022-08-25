@@ -105,8 +105,8 @@ public class FancyMuteService : Service, IFancyMuteService
         }
         catch (Exception e)
         {
-            Serilog.Log.Error(e, "Failed to resolve reactions");
-            return;
+            Serilog.Log.Error(e, "Failed to resolve reaction {reactionMessage}", reactionMessage);
+            reactions = Array.Empty<string>();
         }
 
         foreach (string reaction in reactions)
