@@ -2,15 +2,16 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.IO;
 using System.Threading.Tasks;
+using WenigerTorbenBot.Audio.AudioSource.Metadata;
 
 namespace WenigerTorbenBot.Audio.AudioSource;
 
 public interface IAudioSource
 {
-    public void BeginPrepare();
-    public Task WhenPrepared();
-    public IReadOnlyCollection<byte> GetData();
-    public MemoryStream CreateStream();
-    public Task WriteAsync(Stream stream);
+    public Task WhenMetadataLoaded();
+    public IAudioSourceMetadata GetAudioSourceMetadata();
+    public void BeginPrepareContent();
+    public Task WhenContentPrepared(bool autoStartContentPreparation = false);
+    public Task StreamAsync(Stream output);
     public AudioSourceType GetAudioSourceType();
 }

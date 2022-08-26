@@ -68,7 +68,7 @@ public class DiscordService : Service, IDiscordService
         await discordSocketClient.StartAsync();
 
         while (!ready)
-            await Task.Delay(500);
+            await Task.Delay(1000);
         Serilog.Log.Debug("DiscordSocketClient is up");
 
     }

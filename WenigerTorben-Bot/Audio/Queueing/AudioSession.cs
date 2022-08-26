@@ -4,9 +4,11 @@ using System.Collections.Immutable;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
+using System.Diagnostics.Contracts;
 using System.IO;
 using System.Linq;
 using System.Net.Http;
+using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 using Discord;
@@ -123,7 +125,7 @@ public class AudioSession : IAudioSession
                 continue;
             }
 
-            try
+            /* try
             {
                 await audioRequest.AudioSource.WhenPrepared();
             }
@@ -135,26 +137,72 @@ public class AudioSession : IAudioSession
                 await audioRequest.OriginChannel.SendMessageAsync($"Sorry {audioRequest.Requestor.Mention}, there was an error while preparing your requested audio: {e.Message}\nYour request will be skipped. Sorry about that!");
                 Dequeue(audioRequest);
                 continue;
-            }
+            } */
 
-            using MemoryStream audioStream = audioRequest.AudioSource.CreateStream();
+            using MemoryStream memoryStream = new MemoryStream();
+            Task streamTask = audioRequest.AudioSource.StreamAsync(memoryStream);
 
             int bitrate = 96000;
             int bufferMillis = 1000;
-            using IAudioClient audioClient = targetChannel.ConnectAsync().GetAwaiter().GetResult();
-            using AudioOutStream voiceStream = audioClient.CreatePCMStream(AudioApplication.Music, bitrate, bufferMillis);
+
+            bool shouldUpdateBufferReference = true;
+            byte[] buffer = memoryStream.GetBuffer();
+            int position = 0;
+            int maxStepSize = Convert.ToInt32(((bitrate / 8.0D) / (bufferMillis / 1000.0D)) / 2); //2 * 1024;
+            IAudioClient? audioClient = null;
+            AudioOutStream? voiceStream = null;
             try
             {
-                int bufferSize = 1024 * 100; //100 KB
+                audioClient = await targetChannel.ConnectAsync();
+                voiceStream = audioClient.CreatePCMStream(AudioApplication.Music, bitrate, bufferMillis);
 
-                byte[] buffer = new byte[bufferSize];
-                int read;
-                while ((read = audioStream.Read(buffer, 0, bufferSize)) > 0)
+                //Read from stream while it is still being writte to
+                do
                 {
+                    if (shouldUpdateBufferReference)
+                    {
+                        buffer = memoryStream.GetBuffer();
+                        shouldUpdateBufferReference = !streamTask.IsCompleted;
+                    }
+
+                    int availableBytesAmount = buffer.Length - position;
+                    if (availableBytesAmount > maxStepSize)
+                        availableBytesAmount = maxStepSize;
+
+                    if (availableBytesAmount > 0)
+                    {
+                        //Detect empty remaining bytes. This happens because of the dynamic resizing of the underlying buffer of a MemoryStream.
+                        //If we would not force-end here, the bot would remain in audio channels and send 0-byte audio for a while after playing any media.
+                        if (streamTask.IsCompleted && buffer[position] == 0)
+                        {
+                            bool foundRemainingData = false;
+                            for (int i = position; i < buffer.Length; i++)
+                            {
+                                if (buffer[i] != 0)
+                                {
+                                    foundRemainingData = true;
+                                    break;
+                                }
+                            }
+
+                            if (!foundRemainingData)
+                                break;
+                        }
+                        Memory<byte> data = buffer.AsMemory(position, availableBytesAmount);
+                        await voiceStream.WriteAsync(data);
+                        position += availableBytesAmount;
+                    }
+                    else
+                        await Task.Delay(bufferMillis / 2); //Let streams buffer a bit in case audio output is faster than input
                     pauseEvent.WaitOne();
-                    voiceStream.Write(buffer, 0, bufferSize); //Plays stream in splitted parts, so a pause in between every part is possible
-                    Thread.Sleep((bufferSize * 8) / (bitrate * bufferMillis));
-                }
+
+                    if (shouldUpdateBufferReference)
+                    {
+                        buffer = memoryStream.GetBuffer();
+                        shouldUpdateBufferReference = !streamTask.IsCompleted;
+                    }
+                } while (!streamTask.IsCompleted || position < buffer.Length);
+                await streamTask;
             }
             catch (Exception e)
             {
@@ -163,8 +211,13 @@ public class AudioSession : IAudioSession
             }
             finally
             {
-                await voiceStream.FlushAsync();
-                await audioClient.StopAsync();
+                if (voiceStream is not null)
+                    await voiceStream.FlushAsync();
+                if (audioClient is not null)
+                {
+                    await audioClient.StopAsync();
+                    audioClient.Dispose();
+                }
                 Dequeue(audioRequest);
             }
         }

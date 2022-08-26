@@ -6,6 +6,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Discord.WebSocket;
 using Serilog;
+using WenigerTorbenBot.Audio.AudioSource.Metadata;
 using WenigerTorbenBot.Services;
 using WenigerTorbenBot.Services.Storage.Library.Audio;
 using WenigerTorbenBot.Storage;
@@ -21,16 +22,16 @@ public class AudioLibraryAudioSource : AudioSource
 
     private readonly SocketGuild guild;
 
-    public AudioLibraryAudioSource(SocketGuild guild, string request) : base(request)
+    public AudioLibraryAudioSource(SocketGuild guild, string request) : base(guild, request)
     {
         this.guild = guild;
     }
 
-    protected override async Task DoPrepareAsync()
+    protected override async Task DoStreamAsync(Stream output)
     {
         LibraryStorageEntry<byte[]>? libraryStorageEntry = GetLibraryStorageEntry(guild, request);
         if (libraryStorageEntry is null)
-            throw new Exception($"No LibraryStorageEntry was found for guild {guild} and request \"{request}\". Did you call IsApplicableFor() first?"); //TODO: Proper exception
+            throw new Exception($"No entry was found for request \"{request}\" in AudioLibraryStorage of guild {guild}"); //TODO: Proper exception
 
         byte[]? data;
         try
@@ -43,8 +44,24 @@ public class AudioLibraryAudioSource : AudioSource
         }
         if (data is null)
             throw new Exception("The desiralized data was null."); //TODO: Proper exception
+        else if (data.Length == 0)
+            throw new ArgumentException("The media at the given path contained no audio to be extracted", nameof(request));
 
-        buffer = data;
+        await output.WriteAsync(data);
+        await output.FlushAsync();
+    }
+
+    protected override Task<IAudioSourceMetadata> DoLoadMetadata()
+    {
+        LibraryStorageEntry<byte[]>? libraryStorageEntry = GetLibraryStorageEntry(guild, request);
+        if (libraryStorageEntry is null)
+            throw new Exception($"No LibraryStorageEntry was found for guild {guild} and request \"{request}\". Did you call IsApplicableFor() first?"); //TODO: Proper exception
+
+        return Task.FromResult(new AudioSourceMetadataBuilder()
+        .WithTitle("title")
+        .WithDuration(TimeSpan.FromSeconds(1))
+        .WithOrigin("library")
+        .Build());
     }
 
     private static LibraryStorageEntry<byte[]>? GetLibraryStorageEntry(SocketGuild guild, string request)
@@ -68,5 +85,4 @@ public class AudioLibraryAudioSource : AudioSource
         //TODO: More matching
         return null;
     }
-
 }

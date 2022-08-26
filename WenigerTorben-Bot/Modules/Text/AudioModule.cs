@@ -59,8 +59,6 @@ public class AudioModule : ModuleBase<SocketCommandContext>
         }
 
         AudioRequest audioRequest = new AudioRequest(guildUser, null, textChannel, request, audioSource);
-
-        audioRequest.AudioSource.BeginPrepare();
         audioService.Enqueue(audioRequest);
 
         Log.Debug("AudioRequest {request} enqueued with AudioSourceType {audioSourceType}", request, audioSource.GetAudioSourceType());
@@ -235,9 +233,11 @@ public class AudioModule : ModuleBase<SocketCommandContext>
 
             try
             {
-                await audioSource.WhenPrepared();
-                byte[] data = audioSource.GetData().ToArray(); //TOOD: Optimize, this currently creates a copy of the audio data in RAM
-                await libraryStorage.ImportAsync(title, description, tagsArray, extrasDictionary, data); await message.ModifyAsync(message => message.Content = "Audio has been added to the guild's library");
+                await audioSource.WhenContentPrepared(true);
+                using MemoryStream memoryStream = new MemoryStream();
+                await audioSource.StreamAsync(memoryStream);
+                await libraryStorage.ImportAsync(title, description, tagsArray, extrasDictionary, memoryStream.GetBuffer());
+                await message.ModifyAsync(message => message.Content = "Audio has been added to the guild's library");
             }
             catch (Exception e)
             {

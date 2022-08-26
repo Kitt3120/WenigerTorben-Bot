@@ -2,6 +2,7 @@ using System;
 using System.IO;
 using System.Threading.Tasks;
 using Discord.WebSocket;
+using WenigerTorbenBot.Audio.AudioSource.Metadata;
 using WenigerTorbenBot.Services;
 using WenigerTorbenBot.Services.FFmpeg;
 using WenigerTorbenBot.Services.File;
@@ -15,10 +16,10 @@ public class WebAudioSource : AudioSource
 
     public override AudioSourceType GetAudioSourceType() => AudioSourceType.Web;
 
-    public WebAudioSource(string request) : base(request)
+    public WebAudioSource(SocketGuild guild, string request) : base(guild, request)
     { }
 
-    protected override async Task DoPrepareAsync()
+    protected override async Task DoStreamAsync(Stream output)
     {
         IFileService? fileService = ServiceRegistry.Get<IFileService>();
         if (fileService is null)
@@ -43,8 +44,9 @@ public class WebAudioSource : AudioSource
 
             if (data.Length == 0)
                 throw new ArgumentException("The media at the given URL contained no audio to be extracted", nameof(request));
-            else
-                buffer = data;
+
+            await output.WriteAsync(data);
+            await output.FlushAsync();
         }
         catch (Exception)
         {
@@ -55,5 +57,14 @@ public class WebAudioSource : AudioSource
             if (File.Exists(tempFilePath))
                 File.Delete(tempFilePath);
         }
+    }
+
+    protected override Task<IAudioSourceMetadata> DoLoadMetadata()
+    {
+        return Task.FromResult(new AudioSourceMetadataBuilder()
+        .WithTitle("title")
+        .WithDuration(TimeSpan.FromSeconds(1))
+        .WithOrigin("web")
+        .Build());
     }
 }

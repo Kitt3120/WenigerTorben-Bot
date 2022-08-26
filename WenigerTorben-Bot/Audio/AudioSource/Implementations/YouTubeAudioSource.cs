@@ -2,11 +2,14 @@ using System;
 using System.IO;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+using Discord.WebSocket;
+using WenigerTorbenBot.Audio.AudioSource.Metadata;
 using WenigerTorbenBot.Services;
 using WenigerTorbenBot.Services.FFmpeg;
 using WenigerTorbenBot.Services.File;
 using WenigerTorbenBot.Services.YouTube;
 using WenigerTorbenBot.Utils;
+using YoutubeExplode.Videos.Streams;
 
 namespace WenigerTorbenBot.Audio.AudioSource;
 
@@ -16,17 +19,11 @@ public class YouTubeAudioSource : AudioSource
 
     public override AudioSourceType GetAudioSourceType() => AudioSourceType.YouTube;
 
-    public YouTubeAudioSource(string request) : base(request)
+    public YouTubeAudioSource(SocketGuild guild, string request) : base(guild, request)
     { }
 
-    protected override async Task DoPrepareAsync()
+    protected override async Task DoStreamAsync(Stream output)
     {
-        IFileService? fileService = ServiceRegistry.Get<IFileService>();
-        if (fileService is null)
-            throw new Exception("FileService was null"); //TODO: Proper exception
-        if (fileService.Status != ServiceStatus.Started)
-            throw new Exception($"FileService was not available. FileService status: {fileService.Status}"); //TODO: Proper exception
-
         IFFmpegService? ffmpegService = ServiceRegistry.Get<IFFmpegService>();
         if (ffmpegService is null)
             throw new Exception("FFmpegService was null"); //TODO: Proper exception
@@ -42,25 +39,16 @@ public class YouTubeAudioSource : AudioSource
         if (!WebUtils.TryParseUri(request, out Uri? uri) || uri is null)
             throw new ArgumentException("Value was not a valid HTTP/-S URL"); //Parameter not specified here because it could confuse users when it ends up in a message sent back to one
 
-        string tempFilePath = $"{fileService.GetTempPath()}.mkv";
-        try
-        {
-            await youTubeService.DownloadBestAudioAsync(uri.AbsoluteUri, tempFilePath);
-            byte[] data = await ffmpegService.ReadAudioAsync(tempFilePath);
+        using Stream youtubeStream = await youTubeService.OpenBestAudioAsync(uri.AbsoluteUri);
+        await ffmpegService.StreamAudioAsync(youtubeStream, output);
+    }
 
-            if (data.Length == 0)
-                throw new ArgumentException("The media at the given URL contained no audio to be extracted", nameof(request));
-            else
-                buffer = data;
-        }
-        catch (Exception)
-        {
-            throw;
-        }
-        finally
-        {
-            if (File.Exists(tempFilePath))
-                File.Delete(tempFilePath);
-        }
+    protected override Task<IAudioSourceMetadata> DoLoadMetadata()
+    {
+        return Task.FromResult(new AudioSourceMetadataBuilder()
+        .WithTitle("title")
+        .WithDuration(TimeSpan.FromSeconds(1))
+        .WithOrigin("youtube")
+        .Build());
     }
 }
