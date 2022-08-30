@@ -1,17 +1,21 @@
 using System.Collections.Generic;
 using Discord;
+using Discord.Audio;
 
 namespace WenigerTorbenBot.Audio.Queueing;
 
 public interface IAudioSession
 {
-    int Enqueue(AudioRequest audioRequest);
-    void Dequeue(AudioRequest audioRequest);
-    void Dequeue(int id);
-    int GetId(AudioRequest audioRequest);
-    void Pause(bool autoPause = false);
-    void Resume();
-    void HandleQueue();
-    IReadOnlyCollection<AudioRequest> GetQueue();
-    IReadOnlyDictionary<int, AudioRequest> GetQueueAsDictionary();
+    public int Enqueue(AudioRequest audioRequest);
+    public void Dequeue(AudioRequest audioRequest);
+    public void Dequeue(int id);
+    public int GetId(AudioRequest audioRequest);
+    public void Pause(bool autoPause = false);
+    public void Resume();
+    public void SetAudioApplication(AudioApplication audioApplication);
+    public void SetBitrate(int bitrate);
+    public void SetBufferMillis(int bufferMillis);
+    public void HandleQueue();
+    public IReadOnlyCollection<AudioRequest> GetQueue();
+    public IReadOnlyDictionary<int, AudioRequest> GetQueueAsDictionary();
 }
