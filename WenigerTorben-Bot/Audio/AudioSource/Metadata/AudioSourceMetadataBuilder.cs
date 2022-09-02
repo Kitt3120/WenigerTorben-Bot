@@ -9,6 +9,7 @@ public class AudioSourceMetadataBuilder : IAudioSourceMetadataBuilder
     private string? author;
     private TimeSpan duration;
     private string? origin;
+
     public AudioSourceMetadataBuilder()
     {
         duration = TimeSpan.Zero;

@@ -4,13 +4,14 @@ using WenigerTorbenBot.Audio.AudioSource;
 
 namespace WenigerTorbenBot.Audio.Queueing
 {
-    public class AudioRequest
+    public class AudioRequest : IAudioRequest
     {
-        public IGuildUser Requestor { get; }
-        public IVoiceChannel? VoiceChannel { get; }
-        public ITextChannel OriginChannel { get; }
-        public string Request { get; }
-        public IAudioSource AudioSource { get; }
+        public IGuildUser Requestor { get; init; }
+        public IVoiceChannel? VoiceChannel { get; init; }
+        public ITextChannel OriginChannel { get; init; }
+        public IVoiceChannel TargetChannel { get => VoiceChannel ?? Requestor.VoiceChannel; }
+        public string Request { get; init; }
+        public IAudioSource AudioSource { get; init; }
 
         public AudioRequest(IGuildUser requestor, IVoiceChannel? voiceChannel, ITextChannel originChannel, string request, IAudioSource audioSource)
         {
@@ -19,14 +20,6 @@ namespace WenigerTorbenBot.Audio.Queueing
             OriginChannel = originChannel;
             Request = request;
             AudioSource = audioSource;
-        }
-
-        public IVoiceChannel GetTargetChannel()
-        {
-            if (VoiceChannel is not null)
-                return VoiceChannel;
-
-            return Requestor.VoiceChannel;
         }
     }
 }

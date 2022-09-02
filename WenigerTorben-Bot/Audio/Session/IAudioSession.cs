@@ -1,8 +1,8 @@
 using System.Collections.Generic;
-using Discord;
 using Discord.Audio;
+using WenigerTorbenBot.Audio.Queueing;
 
-namespace WenigerTorbenBot.Audio.Queueing;
+namespace WenigerTorbenBot.Audio.Session;
 
 public interface IAudioSession
 {

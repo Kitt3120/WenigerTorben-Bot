@@ -1,27 +1,16 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
-using System.ComponentModel;
-using System.Diagnostics;
-using System.Diagnostics.CodeAnalysis;
-using System.Diagnostics.Contracts;
 using System.IO;
 using System.Linq;
-using System.Net.Http;
-using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 using Discord;
 using Discord.Audio;
-using Discord.WebSocket;
 using Serilog;
-using Serilog.Core;
-using WenigerTorbenBot.Audio.AudioSource.Implementations;
-using WenigerTorbenBot.Services;
-using WenigerTorbenBot.Services.Discord;
-using WenigerTorbenBot.Services.FFmpeg;
+using WenigerTorbenBot.Audio.Queueing;
 
-namespace WenigerTorbenBot.Audio.Queueing;
+namespace WenigerTorbenBot.Audio.Session;
 
 public class AudioSession : IAudioSession
 {
@@ -117,9 +106,17 @@ public class AudioSession : IAudioSession
 
     public void SetAudioApplication(AudioApplication audioApplication) => this.audioApplication = audioApplication;
 
-    public void SetBitrate(int bitrate) => this.bitrate = bitrate;
+    public void SetBitrate(int bitrate)
+    {
+        this.bitrate = bitrate;
+        this.stepSize = Convert.ToInt32(((bitrate / 8.0D) / (bufferMillis / 1000.0D)) / 2);
+    }
 
-    public void SetBufferMillis(int bufferMillis) => this.bufferMillis = bufferMillis;
+    public void SetBufferMillis(int bufferMillis)
+    {
+        this.bufferMillis = bufferMillis;
+        this.stepSize = Convert.ToInt32(((bitrate / 8.0D) / (bufferMillis / 1000.0D)) / 2);
+    }
 
     public async void HandleQueue()
     {
@@ -175,7 +172,7 @@ public class AudioSession : IAudioSession
             try
             {
                 audioClient = await targetChannel.ConnectAsync();
-                voiceStream = audioClient.CreatePCMStream(AudioApplication.Music, bitrate, bufferMillis);
+                voiceStream = audioClient.CreatePCMStream(audioApplication, bitrate, bufferMillis);
 
                 //Read from stream while it is still being writte to
                 do
