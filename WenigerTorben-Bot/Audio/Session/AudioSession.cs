@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.IO;
 using System.Linq;
+using System.Runtime.ExceptionServices;
+using System.Security.AccessControl;
 using System.Threading;
 using System.Threading.Tasks;
 using Discord;
@@ -14,18 +16,60 @@ namespace WenigerTorbenBot.Audio.Session;
 
 public class AudioSession : IAudioSession
 {
-    public IGuild Guild { get; private set; }
+    public IGuild Guild { get; init; }
+    public AudioApplication AudioApplication { get; set; }
+    public int Bitrate { get; set; }
+    public int BufferMillis { get; set; }
+    public int StepSize => Convert.ToInt32(((Bitrate / 8.0D) / (BufferMillis / 1000.0D)) / 2);
+    public bool Paused => !pauseEvent.WaitOne(0);
+    public bool HasReachedEnd
+    {
+        get
+        {
+            lock (reachedEndLock)
+                return reachedEnd;
+        }
+        set
+        {
+            lock (reachedEndLock)
+                reachedEnd = value;
+        }
+    }
+    public IAudioRequestQueue AudioRequestQueue { get; init; }
+    public int Position
+    {
+        get
+        {
+            lock (positionLock)
+                return position;
+        }
+        set
+        {
+            if (AudioRequestQueue.IsEmpty)
+            {
+                HasReachedEnd = true;
+                value = 0;
+            }
+            else
+            {
+                HasReachedEnd = false;
 
-    private AudioApplication audioApplication;
-    private int bitrate;
-    private int bufferMillis;
-    private int stepSize;
+                if (value < 0)
+                    value = 0;
+                else if (value >= AudioRequestQueue.Count)
+                    value = AudioRequestQueue.Count - 1;
+            }
 
-    private readonly object queueLock;
-    private readonly List<AudioRequest> queue;
+            lock (positionLock)
+                position = value;
+        }
+    }
+
     private readonly ManualResetEvent pauseEvent;
-    private readonly object autoPauseLock;
-    private bool autoPaused;
+    private readonly object reachedEndLock;
+    private bool reachedEnd;
+    private readonly object positionLock;
+    private int position;
     private readonly object bufferLock;
     private readonly Thread queueThread;
 
@@ -33,110 +77,90 @@ public class AudioSession : IAudioSession
     {
         this.Guild = guild;
 
-        this.audioApplication = audioApplication;
-        this.bitrate = bitrate;
-        this.bufferMillis = bufferMillis;
-        this.stepSize = Convert.ToInt32(((bitrate / 8.0D) / (bufferMillis / 1000.0D)) / 2);
+        this.AudioApplication = audioApplication;
+        this.Bitrate = bitrate;
+        this.BufferMillis = bufferMillis;
+        this.AudioRequestQueue = new AudioRequestQueue();
 
-        this.queueLock = new object();
-        this.queue = new List<AudioRequest>();
         this.pauseEvent = new ManualResetEvent(false);
-        this.autoPauseLock = new object();
-        this.autoPaused = true;
+        this.reachedEndLock = new object();
+        this.reachedEnd = true;
+        this.positionLock = new object();
+        this.position = 0;
         this.bufferLock = new object();
         this.queueThread = new Thread(HandleQueue);
+
+        AudioRequestQueue.OnEnqueue += OnEnqueueRequest;
+        AudioRequestQueue.OnDequeue += OnDequeueRequest;
+
+
         this.queueThread.Start();
     }
 
-    public int Enqueue(AudioRequest audioRequest)
+    private void OnEnqueueRequest(object? sender, EventArgs e)
     {
-        lock (queueLock)
-            if (!queue.Contains(audioRequest))
-                queue.Add(audioRequest);
-
-        bool wasAutoPaused;
-        lock (autoPauseLock)
-            wasAutoPaused = autoPaused;
-
-        if (wasAutoPaused)
+        if (HasReachedEnd)
+        {
+            if (AudioRequestQueue.Count > 1)
+                Position++; //This also sets HasReachedEnd to false
+            else
+                HasReachedEnd = false;
             Resume();
-
-        return GetId(audioRequest);
-    }
-
-    public void Dequeue(AudioRequest audioRequest)
-    {
-        lock (queueLock)
-            queue.Remove(audioRequest);
-    }
-
-    public void Dequeue(int id)
-    {
-        lock (queueLock)
-        {
-            AudioRequest? audioRequest = queue.ElementAt(id);
-            if (audioRequest is not null)
-                queue.Remove(audioRequest);
         }
     }
 
-    public int GetId(AudioRequest audioRequest)
+    private void OnDequeueRequest(object? sender, EventArgs e)
     {
-        lock (queueLock)
-            return queue.IndexOf(audioRequest);
+        if (Position >= AudioRequestQueue.Count)
+            Position = AudioRequestQueue.Count - 1;
     }
 
-    public void Pause(bool autoPause = false)
-    {
-        lock (autoPauseLock)
-        {
-            autoPaused = autoPause;
-            pauseEvent.Reset();
-        }
-    }
+    public void Pause() => pauseEvent.Reset();
 
     public void Resume()
     {
-        lock (autoPauseLock)
-        {
-            autoPaused = false;
-            pauseEvent.Set();
-        }
+        HasReachedEnd = false;
+        pauseEvent.Set();
     }
 
-    public void SetAudioApplication(AudioApplication audioApplication) => this.audioApplication = audioApplication;
-
-    public void SetBitrate(int bitrate)
+    public void Skip()
     {
-        this.bitrate = bitrate;
-        this.stepSize = Convert.ToInt32(((bitrate / 8.0D) / (bufferMillis / 1000.0D)) / 2);
+
     }
 
-    public void SetBufferMillis(int bufferMillis)
+    private void Next()
     {
-        this.bufferMillis = bufferMillis;
-        this.stepSize = Convert.ToInt32(((bitrate / 8.0D) / (bufferMillis / 1000.0D)) / 2);
+        if (Position == AudioRequestQueue.Count - 1)
+            HasReachedEnd = true;
+        else
+            Position++;
     }
 
-    public async void HandleQueue()
+    private async void HandleQueue()
     {
         while (true)
         {
             pauseEvent.WaitOne();
 
-            IReadOnlyCollection<AudioRequest> currentQueue = GetQueue();
-            if (!currentQueue.Any())
+            if (AudioRequestQueue.IsEmpty || HasReachedEnd)
             {
-                Pause(true);
+                Pause();
                 continue;
             }
 
-            AudioRequest audioRequest = currentQueue.First();
-            IVoiceChannel? targetChannel = audioRequest.GetTargetChannel();
+            IAudioRequest? audioRequest = AudioRequestQueue.GetAtPosition(Position);
+            if (audioRequest is null)
+            {
+                Pause();
+                Log.Error("AudioRequest at position {position} in queue of AudioSession for guild {guildName} ({guildId}) was null. AudioSession has been paused.", Position, Guild.Name, Guild.Id);
+                continue;
+            }
+
+            IVoiceChannel? targetChannel = audioRequest.TargetChannel;
             if (targetChannel is null)
             {
                 await audioRequest.OriginChannel.SendMessageAsync($"Sorry {audioRequest.Requestor.Mention}, I was not able to determine the voice channel you're in. Your request will be skipped.");
-                Dequeue(audioRequest);
+                Next();
                 continue;
             }
 
@@ -172,15 +196,15 @@ public class AudioSession : IAudioSession
             try
             {
                 audioClient = await targetChannel.ConnectAsync();
-                voiceStream = audioClient.CreatePCMStream(audioApplication, bitrate, bufferMillis);
+                voiceStream = audioClient.CreatePCMStream(AudioApplication, Bitrate, BufferMillis);
 
                 //Read from stream while it is still being writte to
                 do
                 {
                     //Calculate bytes to read based on positionLimit, buffer and maxStepSize
                     int availableBytesAmount = Math.Min(positionLimit - position, buffer.Length - position);
-                    if (availableBytesAmount > stepSize)
-                        availableBytesAmount = stepSize;
+                    if (availableBytesAmount > StepSize)
+                        availableBytesAmount = StepSize;
 
                     if (availableBytesAmount > 0)
                     {
@@ -190,7 +214,7 @@ public class AudioSession : IAudioSession
                         position += availableBytesAmount;
                     }
                     else
-                        await Task.Delay(bufferMillis / 2); //Let streams buffer a bit in case audio output is faster than input
+                        await Task.Delay(BufferMillis / 2); //Let streams buffer a bit in case audio output is faster than input
 
                     pauseEvent.WaitOne();
 
@@ -204,7 +228,7 @@ public class AudioSession : IAudioSession
             }
             catch (Exception e)
             {
-                Log.Error(e, "Error while streaming audio of request {audioRequest} to channel {channel} in guild {guild}. Skipping entry.", audioRequest.Request, audioRequest.GetTargetChannel(), audioRequest.GetTargetChannel().Guild.Id);
+                Log.Error(e, "Error while streaming audio of request {audioRequest} to channel {channelName} ({channelId}) in guild {guildName} ({guildId}). Skipping entry.", audioRequest.Request, audioRequest.TargetChannel.Name, audioRequest.TargetChannel.Id, Guild.Name, Guild.Id);
                 await audioRequest.OriginChannel.SendMessageAsync($"Sorry {audioRequest.Requestor.Mention}, there was an error while playing your requested audio: {e.Message}\nYour request will be skipped. Sorry about that!");
             }
             finally
@@ -216,22 +240,10 @@ public class AudioSession : IAudioSession
                     await audioClient.StopAsync();
                     audioClient.Dispose();
                 }
-                Dequeue(audioRequest);
+
+                Next();
             }
         }
-    }
-
-    public IReadOnlyCollection<AudioRequest> GetQueue()
-    {
-        lock (queueLock)
-            return queue.AsReadOnly();
-    }
-
-    public IReadOnlyDictionary<int, AudioRequest> GetQueueAsDictionary()
-    {
-
-        lock (queueLock)
-            return queue.ToDictionary(audioRequest => queue.IndexOf(audioRequest)).ToImmutableDictionary();
     }
 
 }

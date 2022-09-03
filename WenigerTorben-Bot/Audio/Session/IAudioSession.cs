@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using Discord;
 using Discord.Audio;
 using WenigerTorbenBot.Audio.Queueing;
 
@@ -6,16 +7,17 @@ namespace WenigerTorbenBot.Audio.Session;
 
 public interface IAudioSession
 {
-    public int Enqueue(AudioRequest audioRequest);
-    public void Dequeue(AudioRequest audioRequest);
-    public void Dequeue(int id);
-    public int GetId(AudioRequest audioRequest);
-    public void Pause(bool autoPause = false);
+    public IGuild Guild { get; }
+    public AudioApplication AudioApplication { get; set; }
+    public int Bitrate { get; set; }
+    public int BufferMillis { get; set; }
+    public int StepSize { get; }
+    public bool Paused { get; }
+    public bool HasReachedEnd { get; }
+    public IAudioRequestQueue AudioRequestQueue { get; }
+    public int Position { get; set; }
+
+    public void Pause();
     public void Resume();
-    public void SetAudioApplication(AudioApplication audioApplication);
-    public void SetBitrate(int bitrate);
-    public void SetBufferMillis(int bufferMillis);
-    public void HandleQueue();
-    public IReadOnlyCollection<AudioRequest> GetQueue();
-    public IReadOnlyDictionary<int, AudioRequest> GetQueueAsDictionary();
+    public void Skip();
 }

@@ -6,6 +6,7 @@ namespace WenigerTorbenBot.Audio.Queueing;
 public interface IAudioRequestQueue
 {
     public int Count { get; }
+    public bool IsEmpty { get; }
 
     public event EventHandler? OnEnqueue;
     public event EventHandler? OnDequeue;

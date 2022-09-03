@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using Discord;
 using Serilog;
 using WenigerTorbenBot.Audio.Queueing;
+using WenigerTorbenBot.Audio.Session;
 using WenigerTorbenBot.Services.Discord;
 using WenigerTorbenBot.Services.FFmpeg;
 using WenigerTorbenBot.Services.File;
@@ -40,13 +41,13 @@ public class AudioService : Service, IAudioService
 
     }
 
-    public int Enqueue(AudioRequest audioRequest) => GetAudioSession(audioRequest.Requestor.Guild).Enqueue(audioRequest);
+    public int Enqueue(AudioRequest audioRequest) => GetAudioSession(audioRequest.Requestor.Guild).AudioRequestQueue.Enqueue(audioRequest);
 
-    public void Dequeue(AudioRequest audioRequest) => GetAudioSession(audioRequest.Requestor.Guild).Dequeue(audioRequest);
+    public void Dequeue(AudioRequest audioRequest) => GetAudioSession(audioRequest.Requestor.Guild).AudioRequestQueue.Dequeue(audioRequest);
 
-    public void Dequeue(IGuild guild, int id) => GetAudioSession(guild).Dequeue(id);
+    public void Dequeue(IGuild guild, int id) => GetAudioSession(guild).AudioRequestQueue.Dequeue(id);
 
-    public int GetId(AudioRequest audioRequest) => GetAudioSession(audioRequest.Requestor.Guild).GetId(audioRequest);
+    public int? GetPosition(AudioRequest audioRequest) => GetAudioSession(audioRequest.Requestor.Guild).AudioRequestQueue.GetPosition(audioRequest);
 
     public void Pause(IGuild guild) => GetAudioSession(guild).Pause();
 

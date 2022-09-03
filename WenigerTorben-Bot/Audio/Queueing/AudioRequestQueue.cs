@@ -9,7 +9,8 @@ namespace WenigerTorbenBot.Audio.Queueing;
 
 public class AudioRequestQueue : IAudioRequestQueue
 {
-    public int Count { get => queue.Count; }
+    public int Count => queue.Count;
+    public bool IsEmpty => !queue.Any(); //Should be fine without lock
 
     public event EventHandler? OnEnqueue;
     public event EventHandler? OnDequeue;

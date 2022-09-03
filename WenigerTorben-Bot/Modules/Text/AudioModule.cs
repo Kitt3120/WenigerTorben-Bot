@@ -61,7 +61,6 @@ public class AudioModule : ModuleBase<SocketCommandContext>
         AudioRequest audioRequest = new AudioRequest(guildUser, null, textChannel, request, audioSource);
         audioService.Enqueue(audioRequest);
 
-        Log.Debug("AudioRequest {request} enqueued with AudioSourceType {audioSourceType}", request, audioSource.GetAudioSourceType());
         await ReplyAsync($"{Context.User.Mention}, your request has been added to the queue");
     }
 
