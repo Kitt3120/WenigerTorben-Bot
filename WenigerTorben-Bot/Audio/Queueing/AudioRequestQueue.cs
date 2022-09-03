@@ -109,24 +109,37 @@ public class AudioRequestQueue : IAudioRequestQueue
         }
     }
 
+    //Locking even for just read operations is a good idea, check https://stackoverflow.com/a/1668984
+
     public int? GetPosition(IAudioRequest audioRequest)
     {
-        int index = queue.IndexOf(audioRequest);
-        if (index == -1)
-            return null;
-        else
-            return index;
+        lock (queueLock)
+        {
+            int index = queue.IndexOf(audioRequest);
+            if (index == -1)
+                return null;
+            else
+                return index;
+        }
     }
 
     public IAudioRequest? GetAtPosition(int position)
     {
-        if (position < 0 || position >= Count)
-            return null;
+        lock (queueLock)
+        {
+            if (position < 0 || position >= Count)
+                return null;
 
-        return queue[position];
+            return queue[position];
+        }
     }
 
+    //No lock needed as List.AsReadOnly() simply creates a wrapper and does not read/write any data
     public IReadOnlyCollection<IAudioRequest> GetQueue() => queue.AsReadOnly();
 
-    public IReadOnlyDictionary<int, IAudioRequest> GetQueueAsDictionary() => queue.ToDictionary(audioRequest => queue.IndexOf(audioRequest)).ToImmutableDictionary();
+    public IReadOnlyDictionary<int, IAudioRequest> GetQueueAsDictionary()
+    {
+        lock (queueLock)
+            return queue.ToDictionary(audioRequest => queue.IndexOf(audioRequest)).ToImmutableDictionary();
+    }
 }
