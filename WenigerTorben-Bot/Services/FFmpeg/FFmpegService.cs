@@ -1,8 +1,13 @@
 using System;
+using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
+using FFMpegCore;
+using FFMpegCore.Arguments;
+using FFMpegCore.Enums;
+using FFMpegCore.Pipes;
 using Serilog;
 using Serilog.Core;
 using WenigerTorbenBot.Services.File;
@@ -16,7 +21,7 @@ public class FFmpegService : Service, IFFmpegService
 
     public override ServicePriority Priority => ServicePriority.Optional;
 
-    private IFileService fileService;
+    private readonly IFileService fileService;
     private string? ffmpegPath;
 
     public FFmpegService(IFileService fileService)
@@ -26,8 +31,11 @@ public class FFmpegService : Service, IFFmpegService
 
     protected override void Initialize()
     {
-        string relativePath = fileService.GetAppDomainPath();
+        if (fileService.Status != ServiceStatus.Started)
+            throw new Exception($"FileService is not available. FileService status: {fileService.Status}."); //TODO: Proper exception
 
+        //Detect FFmpeg on host
+        string relativePath = fileService.GetAppDomainPath();
         string? path = null;
         switch (PlatformUtils.GetOSPlatform())
         {
@@ -40,41 +48,59 @@ public class FFmpegService : Service, IFFmpegService
             default:
                 string[] possiblePaths = new string[] { Path.Join(relativePath, "ffmpeg"), "/bin/ffmpeg", "/usr/bin/ffmpeg", "/sbin/ffmpeg", "/usr/sbin/ffmpeg" };
 
-                path = possiblePaths.First(possiblePath => System.IO.File.Exists(possiblePath));
+                path = possiblePaths.FirstOrDefault(possiblePath => System.IO.File.Exists(possiblePath));
                 if (path is null)
                     throw new FileNotFoundException($"FFmpeg binary not found at {string.Join(", ", possiblePaths)}");
                 ffmpegPath = path;
                 break;
         }
-        Serilog.Log.Debug("Using ffmpeg at {ffmpegPath}", ffmpegPath);
+        Serilog.Log.Debug("Using FFMpeg at {ffmpegPath}", ffmpegPath);
+        ffmpegPath = Path.GetDirectoryName(ffmpegPath);
+        if (string.IsNullOrWhiteSpace(ffmpegPath))
+            throw new FileNotFoundException("Failed to resolve FFmpeg binary's parent folder");
+
+        //Configure FFMpegCore
+        GlobalFFOptions.Configure(new FFOptions() { BinaryFolder = ffmpegPath, TemporaryFilesFolder = fileService.GetTempDirectory() });
     }
 
-    public Process GetProcess(string filepath, params string[] arguments)
+    public async Task StreamAudioAsync(string filepath, Stream output)
     {
-        if (Status != ServiceStatus.Started)
-            throw new Exception($"Stream for file {filepath} requested but FFmpegService has Status {Status}."); //TODO: Proper exception
-
-        if (System.IO.File.Exists(filepath))
-            throw new FileNotFoundException($"No file found at {filepath}.");
-
-        Process? ffmpegProcess = Process.Start(new ProcessStartInfo
+        await FFMpegArguments
+        .FromFileInput(filepath)
+        .OutputToPipe(new StreamPipeSink(output), options =>
         {
-            FileName = ffmpegPath,
-            Arguments = string.Join(" ", arguments),
-            UseShellExecute = false,
-            RedirectStandardOutput = true
-        });
-
-        if (ffmpegProcess is null)
-            throw new Exception("The FFmpeg process was null."); //TODO: Proper exception
-
-        return ffmpegProcess;
+            options.WithAudioSamplingRate(48000);
+            options.WithAudioBitrate(AudioQuality.Ultra);
+            options.ForceFormat("s16le");
+        })
+        .ProcessAsynchronously();
     }
 
-    public async Task StreamAudioAsync(string filepath, Stream stream)
+    public async Task StreamAudioAsync(Stream input, Stream output)
     {
-        using Process process = GetProcess(filepath, "-hide_banner", "-loglevel panic", $"-i \"{filepath}\"", "-ac 2", "-f s16le", "-ar 48000", "pipe:1");
-        await process.StandardOutput.BaseStream.CopyToAsync(stream);
+        await FFMpegArguments
+        .FromPipeInput(new StreamPipeSource(input))
+        .OutputToPipe(new StreamPipeSink(output), options =>
+        {
+            options.WithAudioSamplingRate(48000);
+            options.WithAudioBitrate(AudioQuality.Ultra);
+            options.ForceFormat("s16le");
+        })
+        .ProcessAsynchronously();
+    }
+
+    public async Task<byte[]> ReadAudioAsync(string filepath)
+    {
+        using MemoryStream memoryStream = new MemoryStream();
+        await StreamAudioAsync(filepath, memoryStream);
+        return memoryStream.GetBuffer();
+    }
+
+    public async Task<byte[]> ReadAudioAsync(Stream input)
+    {
+        using MemoryStream memoryStream = new MemoryStream();
+        await StreamAudioAsync(input, memoryStream);
+        return memoryStream.GetBuffer();
     }
 
     protected override ServiceConfiguration CreateServiceConfiguration() => new ServiceConfigurationBuilder().Build();

@@ -6,19 +6,11 @@ using WenigerTorbenBot.Storage;
 
 namespace WenigerTorbenBot.Services.Storage;
 
-public interface IStorageService : IService, IDisposable
+public interface IStorageService<T> : IService, IDisposable
 {
-    public string GetDirectory();
-
     public string GetStorageFilePath(string identifier = "global");
 
-    public IEnumerable<string> GetIdentifiers();
-
-    public bool Exists(string identifier = "global");
-
-    public IStorage<object>? Get(string identifier = "global");
-
-    public void Delete(string identifier);
+    public string GetDirectory();
 
     public void Load(string identifier = "global");
 
@@ -27,5 +19,15 @@ public interface IStorageService : IService, IDisposable
     public void Save(string identifier = "global");
 
     public void SaveAll();
+
+    public IReadOnlyCollection<string> GetIdentifiers();
+
+    public IReadOnlyCollection<IStorage<T>> GetStorages();
+
+    public bool Exists(string identifier = "global");
+
+    public IStorage<T>? Get(string identifier = "global");
+
+    public void Delete(string identifier);
 
 }

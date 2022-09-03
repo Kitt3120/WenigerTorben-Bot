@@ -3,5 +3,5 @@ using WenigerTorbenBot.Services.Storage;
 
 namespace WenigerTorbenBot.Storage.Config;
 
-public interface IConfigService : IAsyncStorageService
+public interface IConfigStorageService<T> : IAsyncStorageService<T>
 { }

@@ -13,8 +13,7 @@ public class SetupService : Service, ISetupService
     public override ServicePriority Priority => ServicePriority.Optional;
 
     private readonly InputHandler inputHandler;
-    private readonly IConfigService configService;
-    private readonly IDiscordService discordService;
+    private readonly IConfigStorageService<object> configService;
 
     private IAsyncStorage<object>? config;
     private readonly string[] neededKeys;
@@ -23,11 +22,10 @@ public class SetupService : Service, ISetupService
     private readonly int endState;
     private bool running;
 
-    public SetupService(InputHandler inputHandler, IConfigService configService, IDiscordService discordService)
+    public SetupService(InputHandler inputHandler, IConfigStorageService<object> configService)
     {
         this.inputHandler = inputHandler;
         this.configService = configService;
-        this.discordService = discordService;
 
         neededKeys = new string[] { "discord.token" };
         state = 0;

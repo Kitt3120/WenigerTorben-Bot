@@ -9,4 +9,8 @@ public interface IFileService : IService
     public string GetAndCreateDirectory(params string[] paths);
 
     public string GetAppDomainPath();
+
+    public string GetTempDirectory();
+
+    public string GetTempPath();
 }

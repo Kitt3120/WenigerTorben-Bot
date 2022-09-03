@@ -6,6 +6,8 @@ namespace WenigerTorbenBot.Services.FFmpeg;
 
 public interface IFFmpegService : IService
 {
-    public Process GetProcess(string filepath, params string[] arguments);
-    public Task StreamAudioAsync(string filepath, Stream stream);
+    public Task StreamAudioAsync(string filepath, Stream output);
+    public Task StreamAudioAsync(Stream input, Stream output);
+    public Task<byte[]> ReadAudioAsync(string filepath);
+    public Task<byte[]> ReadAudioAsync(Stream input);
 }
