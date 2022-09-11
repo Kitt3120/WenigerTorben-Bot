@@ -53,6 +53,8 @@ public class AudioService : Service, IAudioService
 
     public void Resume(IGuild guild) => GetAudioSession(guild).Resume();
 
+    public void Skip(IGuild guild) => GetAudioSession(guild).Skip();
+
     public IAudioSession GetAudioSession(IGuild guild)
     {
         lock (audioSessionsLock)

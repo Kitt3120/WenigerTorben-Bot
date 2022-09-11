@@ -8,10 +8,11 @@ namespace WenigerTorbenBot.Services.Audio;
 public interface IAudioService : IService
 {
     public int Enqueue(AudioRequest audioRequest);
-    void Dequeue(AudioRequest audioRequest);
-    void Dequeue(IGuild guild, int id);
-    int? GetPosition(AudioRequest audioRequest);
-    void Pause(IGuild guild);
-    void Resume(IGuild guild);
+    public void Dequeue(AudioRequest audioRequest);
+    public void Dequeue(IGuild guild, int id);
+    public int? GetPosition(AudioRequest audioRequest);
+    public void Pause(IGuild guild);
+    public void Resume(IGuild guild);
+    public void Skip(IGuild guild);
     public IAudioSession GetAudioSession(IGuild guild);
 }

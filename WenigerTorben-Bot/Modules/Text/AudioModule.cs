@@ -8,9 +8,11 @@ using System.Threading;
 using System.Threading.Tasks;
 using Discord;
 using Discord.Commands;
+using Discord.WebSocket;
 using Serilog;
 using WenigerTorbenBot.Audio.AudioSource;
 using WenigerTorbenBot.Audio.Queueing;
+using WenigerTorbenBot.Audio.Session;
 using WenigerTorbenBot.Services.Audio;
 using WenigerTorbenBot.Services.FFmpeg;
 using WenigerTorbenBot.Services.File;
@@ -58,10 +60,17 @@ public class AudioModule : ModuleBase<SocketCommandContext>
             return;
         }
 
-        AudioRequest audioRequest = new AudioRequest(guildUser, null, textChannel, request, audioSource);
-        audioService.Enqueue(audioRequest);
+        SocketVoiceChannel? voiceChannel = Context.Guild.VoiceChannels.Where(vc => vc.ConnectedUsers.Any(user => user.Id == Context.User.Id)).FirstOrDefault();
+        if (voiceChannel is null)
+        {
+            await ReplyAsync($"Sorry {Context.User.Mention}, your request could not be queued as I was not able to find the voice channel you're in");
+            return;
+        }
 
-        await ReplyAsync($"{Context.User.Mention}, your request has been added to the queue");
+        AudioRequest audioRequest = new AudioRequest(guildUser, voiceChannel, textChannel, request, audioSource);
+        int position = audioService.Enqueue(audioRequest);
+
+        await ReplyAsync($"{Context.User.Mention}, your request has been added to the queue in position {position + 1}");
     }
 
     [Command("pause")]
@@ -76,7 +85,6 @@ public class AudioModule : ModuleBase<SocketCommandContext>
         }
 
         audioService.Pause(Context.Guild);
-        Log.Debug("AudioSession for Guild {guild} paused by user {user}", Context.Guild.Id, Context.User.Id);
         await ReplyAsync("Audio session paused");
     }
 
@@ -91,9 +99,28 @@ public class AudioModule : ModuleBase<SocketCommandContext>
             return;
         }
 
-        Log.Debug("AudioSession for Guild {guild} resumed by user {user}", Context.Guild.Id, Context.User.Id);
         audioService.Resume(Context.Guild);
         await ReplyAsync("Audio session resumed");
+    }
+
+    [Command("skip")]
+    [Summary("Skips the current track")]
+    public async Task Skip()
+    {
+        if (Context.User is not IGuildUser || Context.Channel is not ITextChannel)
+        {
+            await ReplyAsync("This command is only available on guilds");
+            return;
+        }
+
+        IAudioSession audioSession = audioService.GetAudioSession(Context.Guild);
+        if (audioSession.HasReachedEnd)
+            await ReplyAsync($"{Context.User.Mention}, nothing is playing");
+        else
+        {
+            audioSession.Skip();
+            await ReplyAsync($"{Context.User.Mention}, skip requested");
+        }
     }
 
     [Command("audio")]

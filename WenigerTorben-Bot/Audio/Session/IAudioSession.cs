@@ -9,6 +9,7 @@ public interface IAudioSession
 {
     public IGuild Guild { get; }
     public AudioApplication AudioApplication { get; set; }
+    public bool AutoBitrate { get; set; }
     public int Bitrate { get; set; }
     public int BufferMillis { get; set; }
     public int StepSize { get; }

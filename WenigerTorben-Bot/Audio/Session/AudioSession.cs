@@ -18,6 +18,7 @@ public class AudioSession : IAudioSession
 {
     public IGuild Guild { get; init; }
     public AudioApplication AudioApplication { get; set; }
+    public bool AutoBitrate { get; set; }
     public int Bitrate { get; set; }
     public int BufferMillis { get; set; }
     public int StepSize => Convert.ToInt32(((Bitrate / 8.0D) / (BufferMillis / 1000.0D)) / 2);
@@ -66,23 +67,31 @@ public class AudioSession : IAudioSession
     }
 
     private readonly ManualResetEvent pauseEvent;
+    private readonly object skipLock;
+    private bool skipRequested;
     private readonly object reachedEndLock;
     private bool reachedEnd;
     private readonly object positionLock;
     private int position;
+    private IAudioRequest? previousRequest;
+    private IAudioClient? audioClient;
+    private AudioOutStream? audioStream;
     private readonly object bufferLock;
     private readonly Thread queueThread;
 
-    public AudioSession(IGuild guild, AudioApplication audioApplication = AudioApplication.Music, int bitrate = 96000, int bufferMillis = 1000)
+    public AudioSession(IGuild guild, AudioApplication audioApplication = AudioApplication.Music, int? bitrate = null, int bufferMillis = 1000)
     {
         this.Guild = guild;
 
         this.AudioApplication = audioApplication;
-        this.Bitrate = bitrate;
+        this.AutoBitrate = bitrate is null;
+        this.Bitrate = bitrate is null ? 0 : bitrate.Value;
         this.BufferMillis = bufferMillis;
         this.AudioRequestQueue = new AudioRequestQueue();
 
         this.pauseEvent = new ManualResetEvent(false);
+        this.skipLock = new object();
+        this.skipRequested = false;
         this.reachedEndLock = new object();
         this.reachedEnd = true;
         this.positionLock = new object();
@@ -125,7 +134,9 @@ public class AudioSession : IAudioSession
 
     public void Skip()
     {
-
+        if (!HasReachedEnd)
+            lock (skipLock)
+                skipRequested = true;
     }
 
     private void Next()
@@ -148,19 +159,20 @@ public class AudioSession : IAudioSession
                 continue;
             }
 
+            lock (skipLock)
+            {
+                if (skipRequested)
+                {
+                    Next();
+                    continue;
+                }
+            }
+
             IAudioRequest? audioRequest = AudioRequestQueue.GetAtPosition(Position);
             if (audioRequest is null)
             {
                 Pause();
                 Log.Error("AudioRequest at position {position} in queue of AudioSession for guild {guildName} ({guildId}) was null. AudioSession has been paused.", Position, Guild.Name, Guild.Id);
-                continue;
-            }
-
-            IVoiceChannel? targetChannel = audioRequest.TargetChannel;
-            if (targetChannel is null)
-            {
-                await audioRequest.OriginChannel.SendMessageAsync($"Sorry {audioRequest.Requestor.Mention}, I was not able to determine the voice channel you're in. Your request will be skipped.");
-                Next();
                 continue;
             }
 
@@ -191,12 +203,34 @@ public class AudioSession : IAudioSession
                 }
             });
 
-            IAudioClient? audioClient = null;
-            AudioOutStream? voiceStream = null;
+            IVoiceChannel targetChannel = audioRequest.VoiceChannel;
             try
             {
-                audioClient = await targetChannel.ConnectAsync();
-                voiceStream = audioClient.CreatePCMStream(AudioApplication, Bitrate, BufferMillis);
+                if (audioStream is not null)
+                {
+                    await audioStream.FlushAsync();
+                    await audioStream.DisposeAsync();
+                }
+
+                if (targetChannel != previousRequest?.VoiceChannel)
+                {
+                    if (audioClient is not null)
+                    {
+                        await audioClient.StopAsync();
+                        audioClient.Dispose();
+                        audioClient = null;
+                    }
+                }
+
+                if (audioClient is null)
+                    audioClient = await targetChannel.ConnectAsync();
+
+                if (AutoBitrate)
+                    Bitrate = targetChannel.Bitrate;
+
+                audioStream = audioClient.CreatePCMStream(AudioApplication, Bitrate, BufferMillis);
+                previousRequest = audioRequest;
+
 
                 //Read from stream while it is still being writte to
                 do
@@ -210,13 +244,20 @@ public class AudioSession : IAudioSession
                     {
                         //No locking of bufferLock needed, as we're just reading. Worst case we're reading from the old buffer for this iteration, which would be no problem.
                         Memory<byte> data = buffer.AsMemory(position, availableBytesAmount);
-                        await voiceStream.WriteAsync(data);
+                        await audioStream.WriteAsync(data);
                         position += availableBytesAmount;
                     }
                     else
                         await Task.Delay(BufferMillis / 2); //Let streams buffer a bit in case audio output is faster than input
 
                     pauseEvent.WaitOne();
+                    lock (skipLock)
+                        if (skipRequested)
+                        {
+                            skipRequested = false;
+                            break;
+                        }
+
 
                     if (!streamTask.IsCompleted) //If new input is still being streamed, update reference in case a new buffer has been allocated by memoryStream
                         lock (bufferLock)
@@ -228,19 +269,11 @@ public class AudioSession : IAudioSession
             }
             catch (Exception e)
             {
-                Log.Error(e, "Error while streaming audio of request {audioRequest} to channel {channelName} ({channelId}) in guild {guildName} ({guildId}). Skipping entry.", audioRequest.Request, audioRequest.TargetChannel.Name, audioRequest.TargetChannel.Id, Guild.Name, Guild.Id);
+                Log.Error(e, "Error while streaming audio of request {audioRequest} to channel {channelName} ({channelId}) in guild {guildName} ({guildId}). Skipping entry.", audioRequest.Request, audioRequest.VoiceChannel.Name, audioRequest.VoiceChannel.Id, Guild.Name, Guild.Id);
                 await audioRequest.OriginChannel.SendMessageAsync($"Sorry {audioRequest.Requestor.Mention}, there was an error while playing your requested audio: {e.Message}\nYour request will be skipped. Sorry about that!");
             }
             finally
             {
-                if (voiceStream is not null)
-                    await voiceStream.FlushAsync();
-                if (audioClient is not null)
-                {
-                    await audioClient.StopAsync();
-                    audioClient.Dispose();
-                }
-
                 Next();
             }
         }
