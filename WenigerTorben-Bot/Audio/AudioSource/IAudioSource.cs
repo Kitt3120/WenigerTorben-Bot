@@ -9,7 +9,7 @@ namespace WenigerTorbenBot.Audio.AudioSource;
 public interface IAudioSource
 {
     public Task WhenMetadataLoaded();
-    public IAudioSourceMetadata GetAudioSourceMetadata();
+    public IMetadata GetAudioSourceMetadata();
     public void BeginPrepareContent();
     public Task WhenContentPrepared(bool autoStartContentPreparation = false);
     public Task StreamAsync(Stream output);

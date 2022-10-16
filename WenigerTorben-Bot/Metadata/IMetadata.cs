@@ -3,7 +3,7 @@ using System.Collections.Generic;
 
 namespace WenigerTorbenBot.Metadata;
 
-public interface IAudioSourceMetadata
+public interface IMetadata
 {
     public string? ID { get; }
     public string? Title { get; }
@@ -13,6 +13,5 @@ public interface IAudioSourceMetadata
     public string? Origin { get; }
     public string[]? Tags { get; }
     public Dictionary<string, string>? Extras { get; }
-    public string? File { get; }
 
 }

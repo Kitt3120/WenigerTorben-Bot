@@ -1,11 +1,8 @@
 using System;
-using System.Collections;
-using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using Discord.WebSocket;
-using Serilog;
 using WenigerTorbenBot.Metadata;
 using WenigerTorbenBot.Services;
 using WenigerTorbenBot.Services.Storage.Library.Audio;
@@ -20,12 +17,8 @@ public class AudioLibraryAudioSource : AudioSource
 
     public override AudioSourceType GetAudioSourceType() => AudioSourceType.Library;
 
-    private readonly SocketGuild guild;
-
     public AudioLibraryAudioSource(SocketGuild guild, string request) : base(guild, request)
-    {
-        this.guild = guild;
-    }
+    { }
 
     protected override async Task DoStreamAsync(Stream output)
     {
@@ -51,17 +44,13 @@ public class AudioLibraryAudioSource : AudioSource
         await output.FlushAsync();
     }
 
-    protected override Task<IAudioSourceMetadata> DoLoadMetadata()
+    protected override Task<IMetadata> DoLoadMetadataAsync()
     {
         LibraryStorageEntry<byte[]>? libraryStorageEntry = GetLibraryStorageEntry(guild, request);
         if (libraryStorageEntry is null)
             throw new Exception($"No LibraryStorageEntry was found for guild {guild} and request \"{request}\". Did you call IsApplicableFor() first?"); //TODO: Proper exception
 
-        return Task.FromResult(new AudioSourceMetadataBuilder()
-        .WithTitle("title")
-        .WithDuration(TimeSpan.FromSeconds(1))
-        .WithOrigin("library")
-        .Build());
+        return Task.FromResult(libraryStorageEntry.Metadata as IMetadata);
     }
 
     private static LibraryStorageEntry<byte[]>? GetLibraryStorageEntry(SocketGuild guild, string request)
@@ -78,7 +67,7 @@ public class AudioLibraryAudioSource : AudioSource
         LibraryStorageEntry<byte[]>[] entries = guildStorage.GetValues();
         request = request.ToLower();
 
-        LibraryStorageEntry<byte[]>? match = entries.Where(entry => entry.Title.ToLower() == request).FirstOrDefault();
+        LibraryStorageEntry<byte[]>? match = entries.Where(entry => entry.Metadata.Title?.ToLower() == request).FirstOrDefault();
         if (match is not null)
             return match;
 

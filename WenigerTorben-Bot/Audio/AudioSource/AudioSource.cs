@@ -33,7 +33,7 @@ public abstract class AudioSource : IAudioSource
     protected readonly SocketGuild guild;
     protected readonly string request;
     private readonly Task metadataLoadTask;
-    private IAudioSourceMetadata? audioSourceMetadata;
+    private IMetadata? audioSourceMetadata;
     private readonly object contentPreparationLock;
     protected byte[]? contentPreparationBuffer;
     private Task? contentPreparationTask;
@@ -42,22 +42,22 @@ public abstract class AudioSource : IAudioSource
     {
         this.guild = guild;
         this.request = request;
-        this.metadataLoadTask = LoadMetadata();
+        this.metadataLoadTask = LoadMetadataAsync();
         this.contentPreparationLock = new object();
     }
 
-    private async Task LoadMetadata() => audioSourceMetadata = await DoLoadMetadata();
+    private async Task LoadMetadataAsync() => audioSourceMetadata = await DoLoadMetadataAsync();
 
     public Task WhenMetadataLoaded() => metadataLoadTask;
 
-    public IAudioSourceMetadata GetAudioSourceMetadata()
+    public IMetadata GetAudioSourceMetadata()
     {
         if (audioSourceMetadata is null)
             throw new NullReferenceException("\"audioSourceMetadata\" was null. Did you await WhenMetadataLoaded() first?");
         return audioSourceMetadata;
     }
 
-    private async Task PrepareContent()
+    private async Task PrepareContentAsync()
     {
         using MemoryStream memoryStream = new MemoryStream();
         await DoStreamAsync(memoryStream);
@@ -74,7 +74,7 @@ public abstract class AudioSource : IAudioSource
                 return;
             }
 
-            contentPreparationTask = PrepareContent();
+            contentPreparationTask = PrepareContentAsync();
         }
     }
 
@@ -112,7 +112,7 @@ public abstract class AudioSource : IAudioSource
         }
     }
 
-    protected abstract Task<IAudioSourceMetadata> DoLoadMetadata();
+    protected abstract Task<IMetadata> DoLoadMetadataAsync();
     protected abstract Task DoStreamAsync(Stream output);
 
     public abstract AudioSourceType GetAudioSourceType();

@@ -7,11 +7,9 @@ using Discord.WebSocket;
 using WenigerTorbenBot.Metadata;
 using WenigerTorbenBot.Services;
 using WenigerTorbenBot.Services.FFmpeg;
-using WenigerTorbenBot.Services.File;
 using WenigerTorbenBot.Services.YouTube;
 using WenigerTorbenBot.Utils;
 using YoutubeExplode.Videos;
-using YoutubeExplode.Videos.Streams;
 
 namespace WenigerTorbenBot.Audio.AudioSource;
 
@@ -45,7 +43,7 @@ public class YouTubeAudioSource : AudioSource
         await ffmpegService.StreamAudioAsync(youtubeStream, output);
     }
 
-    protected override async Task<IAudioSourceMetadata> DoLoadMetadata()
+    protected override async Task<IMetadata> DoLoadMetadataAsync()
     {
         IYouTubeService? youTubeService = ServiceRegistry.Get<IYouTubeService>();
         if (youTubeService is null)
@@ -58,7 +56,7 @@ public class YouTubeAudioSource : AudioSource
 
         Video video = await youTubeService.GetVideoAsync(uri.AbsoluteUri);
 
-        return new AudioSourceMetadataBuilder()
+        return new MetadataBuilder()
                 .WithID(video.Id)
                 .WithTitle(video.Title)
                 .WithDescription(video.Description)

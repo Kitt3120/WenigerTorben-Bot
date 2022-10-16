@@ -13,6 +13,7 @@ using Serilog;
 using WenigerTorbenBot.Audio.AudioSource;
 using WenigerTorbenBot.Audio.Queueing;
 using WenigerTorbenBot.Audio.Session;
+using WenigerTorbenBot.Metadata;
 using WenigerTorbenBot.Services.Audio;
 using WenigerTorbenBot.Services.FFmpeg;
 using WenigerTorbenBot.Services.File;
@@ -179,19 +180,19 @@ public class AudioModule : ModuleBase<SocketCommandContext>
             List<EmbedFieldBuilder> embedFields = new List<EmbedFieldBuilder>();
             foreach (LibraryStorageEntry<byte[]> libraryStorageEntry in libraryStorageEntries)
             {
-                EmbedFieldBuilder embedFieldBuilder = new EmbedFieldBuilder().WithName(libraryStorageEntry.Title);
+                EmbedFieldBuilder embedFieldBuilder = new EmbedFieldBuilder().WithName(libraryStorageEntry.Metadata.Title);
                 StringBuilder valueBuilder = new StringBuilder();
 
-                if (libraryStorageEntry.Description is not null)
-                    valueBuilder.AppendLine(libraryStorageEntry.Description);
+                if (libraryStorageEntry.Metadata.Description is not null)
+                    valueBuilder.AppendLine(libraryStorageEntry.Metadata.Description);
 
-                valueBuilder.AppendLine($"ID: {libraryStorageEntry.Id}");
+                valueBuilder.AppendLine($"ID: {libraryStorageEntry.Metadata.ID}");
 
-                if (libraryStorageEntry.Tags is not null)
-                    valueBuilder.AppendLine($"Tags: {string.Join(", ", libraryStorageEntry.Tags)}");
+                if (libraryStorageEntry.Metadata.Tags is not null)
+                    valueBuilder.AppendLine($"Tags: {string.Join(", ", libraryStorageEntry.Metadata.Tags)}");
 
-                if (libraryStorageEntry.Extras is not null)
-                    foreach (KeyValuePair<string, string> extraPair in libraryStorageEntry.Extras)
+                if (libraryStorageEntry.Metadata.Extras is not null)
+                    foreach (KeyValuePair<string, string> extraPair in libraryStorageEntry.Metadata.Extras)
                         valueBuilder.AppendLine($"{extraPair.Key}: {extraPair.Value}");
 
                 embedFieldBuilder.WithValue(valueBuilder.ToString());
@@ -255,6 +256,20 @@ public class AudioModule : ModuleBase<SocketCommandContext>
                 return;
             }
 
+            await audioSource.WhenMetadataLoaded();
+            IMetadata sourceMetadata = audioSource.GetAudioSourceMetadata();
+
+            Metadata.Metadata metadata = new MetadataBuilder()
+                                    .WithID(Guid.NewGuid().ToString())
+                                    .WithTitle(title)
+                                    .WithDescription(description ?? sourceMetadata.Description)
+                                    .WithOrigin(sourceMetadata.Origin)
+                                    .WithDuration(sourceMetadata.Duration)
+                                    .WithAuthor(sourceMetadata.Author)
+                                    .WithTags(tagsArray ?? sourceMetadata.Tags)
+                                    .WithExtras(extrasDictionary ?? sourceMetadata.Extras)
+                                    .Build();
+
             Log.Debug("Using AudioSource of type {audioSourceType} for request {url} by {user} on Guild {guild}.", audioSource.GetAudioSourceType(), url, Context.User.Id, Context.Guild.Id);
 
             try
@@ -262,7 +277,7 @@ public class AudioModule : ModuleBase<SocketCommandContext>
                 await audioSource.WhenContentPrepared(true);
                 using MemoryStream memoryStream = new MemoryStream();
                 await audioSource.StreamAsync(memoryStream);
-                await libraryStorage.ImportAsync(title, description, tagsArray, extrasDictionary, memoryStream.GetBuffer());
+                await libraryStorage.ImportAsync(metadata, memoryStream.GetBuffer());
                 await message.ModifyAsync(message => message.Content = "Audio has been added to the guild's library");
             }
             catch (Exception e)

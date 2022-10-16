@@ -34,9 +34,9 @@ public class FileAudioSource : AudioSource
         await output.FlushAsync();
     }
 
-    protected override Task<IAudioSourceMetadata> DoLoadMetadata()
+    protected override Task<IMetadata> DoLoadMetadataAsync()
     {
-        return Task.FromResult(new AudioSourceMetadataBuilder()
+        return Task.FromResult(new MetadataBuilder()
         .WithTitle(Path.GetFileNameWithoutExtension(request))
         .WithOrigin(request)
         .Build());

@@ -5,6 +5,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Serilog;
+using WenigerTorbenBot.Metadata;
 using WenigerTorbenBot.Storage.Config;
 
 namespace WenigerTorbenBot.Storage.Library;
@@ -19,20 +20,18 @@ public class LibraryStorage<T> : ConfigStorage<LibraryStorageEntry<T>>, ILibrary
     {
         directoryPath = Path.GetDirectoryName(filepath);
         if (directoryPath is null)
-        {
-            directoryPath = string.Empty;
             throw new ArgumentException($"Could not get parent directory of {filepath}");
-        }
+
         Directory.CreateDirectory(directoryPath);
     }
 
-    public async Task<LibraryStorageEntry<T>?> ImportAsync(string title, string? description, string[]? tags, Dictionary<string, string>? extras, T data, string? key = null)
+    public async Task<LibraryStorageEntry<T>?> ImportAsync(Metadata.Metadata metadata, T data, string? key = null)
     {
         if (key is null)
-            key = Guid.NewGuid().ToString();
+            key = metadata.ID ?? Guid.NewGuid().ToString();
 
         string path = Path.Combine(directoryPath, $"{key}.bin");
-        LibraryStorageEntry<T> libraryStorageEntry = new LibraryStorageEntry<T>(title, description, tags, extras, path);
+        LibraryStorageEntry<T> libraryStorageEntry = new LibraryStorageEntry<T>(path, metadata);
         try
         {
             await libraryStorageEntry.WriteAsync(data);

@@ -59,12 +59,12 @@ public class WebAudioSource : AudioSource
         }
     }
 
-    protected override async Task<IAudioSourceMetadata> DoLoadMetadata()
+    protected override async Task<IMetadata> DoLoadMetadataAsync()
     {
         if (!WebUtils.TryParseUri(request, out Uri? uri) || uri is null)
             throw new ArgumentException("Value was not a valid HTTP/-S URL"); //Parameter not specified here because it could confuse users when it ends up in a message sent back to one
 
-        return new AudioSourceMetadataBuilder()
+        return new MetadataBuilder()
         .WithTitle(await WebUtils.GetTitleAsync(uri))
         .WithOrigin(uri.AbsoluteUri)
         .Build();

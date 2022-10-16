@@ -3,7 +3,7 @@ using System.Collections.Generic;
 
 namespace WenigerTorbenBot.Metadata;
 
-public class AudioSourceMetadata : IAudioSourceMetadata
+public class Metadata : IMetadata
 {
     public string ID { get; internal set; }
     public string? Title { get; internal set; }
@@ -13,9 +13,8 @@ public class AudioSourceMetadata : IAudioSourceMetadata
     public string? Origin { get; internal set; }
     public string[]? Tags { get; internal set; }
     public Dictionary<string, string>? Extras { get; internal set; }
-    public string? File { get; internal set; }
 
-    public AudioSourceMetadata(string? id, string? title, string? description, string? author, TimeSpan? duration, string? origin, string[]? tags, Dictionary<string, string>? extras, string? file)
+    public Metadata(string? id, string? title, string? description, string? author, TimeSpan? duration, string? origin, string[]? tags, Dictionary<string, string>? extras)
     {
         ID = id is null ? Guid.NewGuid().ToString() : id;
         Title = title;
@@ -25,11 +24,10 @@ public class AudioSourceMetadata : IAudioSourceMetadata
         Origin = origin;
         Tags = tags;
         Extras = extras;
-        File = file;
     }
 
     //Used by AudioSourceMetadataBuilder
-    internal AudioSourceMetadata()
+    internal Metadata()
     {
         ID = Guid.NewGuid().ToString();
         Title = null;
@@ -39,6 +37,5 @@ public class AudioSourceMetadata : IAudioSourceMetadata
         Origin = null;
         Tags = null;
         Extras = null;
-        File = null;
     }
 }
