@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Discord.WebSocket;
@@ -9,6 +10,7 @@ using WenigerTorbenBot.Services.FFmpeg;
 using WenigerTorbenBot.Services.File;
 using WenigerTorbenBot.Services.YouTube;
 using WenigerTorbenBot.Utils;
+using YoutubeExplode.Videos;
 using YoutubeExplode.Videos.Streams;
 
 namespace WenigerTorbenBot.Audio.AudioSource;
@@ -43,12 +45,27 @@ public class YouTubeAudioSource : AudioSource
         await ffmpegService.StreamAudioAsync(youtubeStream, output);
     }
 
-    protected override Task<IAudioSourceMetadata> DoLoadMetadata()
+    protected override async Task<IAudioSourceMetadata> DoLoadMetadata()
     {
-        return Task.FromResult(new AudioSourceMetadataBuilder()
-        .WithTitle("title")
-        .WithDuration(TimeSpan.FromSeconds(1))
-        .WithOrigin("youtube")
-        .Build());
+        IYouTubeService? youTubeService = ServiceRegistry.Get<IYouTubeService>();
+        if (youTubeService is null)
+            throw new Exception("YouTubeService was null"); //TODO: Proper exception
+        if (youTubeService.Status != ServiceStatus.Started)
+            throw new Exception($"YouTubeService was not available. YouTubeService status: {youTubeService.Status}"); //TODO: Proper exception
+
+        if (!WebUtils.TryParseUri(request, out Uri? uri) || uri is null)
+            throw new ArgumentException("Value was not a valid HTTP/-S URL"); //Parameter not specified here because it could confuse users when it ends up in a message sent back to one
+
+        Video video = await youTubeService.GetVideoAsync(uri.AbsoluteUri);
+
+        return new AudioSourceMetadataBuilder()
+                .WithID(video.Id)
+                .WithTitle(video.Title)
+                .WithDescription(video.Description)
+                .WithAuthor(video.Author.ChannelTitle)
+                .WithDuration(video.Duration)
+                .WithOrigin(uri.AbsoluteUri)
+                .WithTags(video.Keywords.ToArray())
+                .Build();
     }
 }

@@ -37,9 +37,8 @@ public class FileAudioSource : AudioSource
     protected override Task<IAudioSourceMetadata> DoLoadMetadata()
     {
         return Task.FromResult(new AudioSourceMetadataBuilder()
-        .WithTitle("title")
-        .WithDuration(TimeSpan.FromSeconds(1))
-        .WithOrigin("file")
+        .WithTitle(Path.GetFileNameWithoutExtension(request))
+        .WithOrigin(request)
         .Build());
     }
 

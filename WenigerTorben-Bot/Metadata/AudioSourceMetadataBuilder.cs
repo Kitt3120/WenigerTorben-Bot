@@ -14,6 +14,12 @@ public class AudioSourceMetadataBuilder : IAudioSourceMetadataBuilder
 
     public IAudioSourceMetadata Build() => audioSourceMetadata;
 
+    public IAudioSourceMetadataBuilder WithID(string? id)
+    {
+        audioSourceMetadata.ID = id is null ? Guid.NewGuid().ToString() : id;
+        return this;
+    }
+
     public IAudioSourceMetadataBuilder WithTitle(string? title)
     {
         audioSourceMetadata.Title = title;

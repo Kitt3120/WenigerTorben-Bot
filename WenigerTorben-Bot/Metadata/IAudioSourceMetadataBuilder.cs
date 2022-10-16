@@ -6,6 +6,7 @@ namespace WenigerTorbenBot.Metadata;
 public interface IAudioSourceMetadataBuilder
 {
     public IAudioSourceMetadata Build();
+    public IAudioSourceMetadataBuilder WithID(string? id);
     public IAudioSourceMetadataBuilder WithTitle(string? title);
     public IAudioSourceMetadataBuilder WithDescription(string? description);
     public IAudioSourceMetadataBuilder WithAuthor(string? author);
