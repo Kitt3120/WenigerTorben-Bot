@@ -9,7 +9,7 @@ public class AudioSourceMetadata : IAudioSourceMetadata
     public string? Title { get; internal set; }
     public string? Description { get; internal set; }
     public string? Author { get; internal set; }
-    public TimeSpan Duration { get; internal set; }
+    public TimeSpan? Duration { get; internal set; }
     public string? Origin { get; internal set; }
     public string[]? Tags { get; internal set; }
     public Dictionary<string, string>? Extras { get; internal set; }
@@ -21,7 +21,7 @@ public class AudioSourceMetadata : IAudioSourceMetadata
         Title = title;
         Description = description;
         Author = author;
-        Duration = duration is null ? default : duration.Value;
+        Duration = duration;
         Origin = origin;
         Tags = tags;
         Extras = extras;
@@ -35,7 +35,7 @@ public class AudioSourceMetadata : IAudioSourceMetadata
         Title = null;
         Description = null;
         Author = null;
-        Duration = default;
+        Duration = null;
         Origin = null;
         Tags = null;
         Extras = null;

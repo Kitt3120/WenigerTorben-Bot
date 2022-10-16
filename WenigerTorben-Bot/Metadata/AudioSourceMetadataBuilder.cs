@@ -40,7 +40,7 @@ public class AudioSourceMetadataBuilder : IAudioSourceMetadataBuilder
 
     public IAudioSourceMetadataBuilder WithDuration(TimeSpan? duration)
     {
-        audioSourceMetadata.Duration = duration is null ? default : duration.Value;
+        audioSourceMetadata.Duration = duration;
         return this;
     }
 
