@@ -48,15 +48,20 @@ public class WebUtils
         return buffer;
     }
 
-    public static async Task<string> GetTitle(Uri uri, HttpClient? httpClient = null)
+    public static async Task<string?> GetTitleAsync(Uri uri, HttpClient? httpClient = null)
     {
         bool noHttpClientGiven = httpClient is null;
         if (noHttpClientGiven)
             httpClient = new HttpClient();
 
         string response = await httpClient.GetStringAsync(uri);
-        string title = Regex.Match(response, @"\<title\b[^>]*\>\s*(?<Title>[\s\S]*?)\</title\>",
-            RegexOptions.IgnoreCase).Groups["Title"].Value;
+        Match match = Regex.Match(response, @"\<title\b[^>]*\>\s*(?<Title>[\s\S]*?)\</title\>", RegexOptions.IgnoreCase);
+
+        string title;
+        if (match.Success)
+            title = match.Groups["Title"].Value;
+        else
+            title = "No title";
 
         if (noHttpClientGiven)
             httpClient.Dispose();
