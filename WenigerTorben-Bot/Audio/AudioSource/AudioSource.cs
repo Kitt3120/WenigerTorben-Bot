@@ -7,8 +7,8 @@ using System.Threading.Tasks;
 using Discord.WebSocket;
 using Serilog;
 using WenigerTorbenBot.Audio.AudioSource.Implementations;
-using WenigerTorbenBot.Audio.AudioSource.Metadata;
 using WenigerTorbenBot.Audio.Queueing;
+using WenigerTorbenBot.Metadata;
 using WenigerTorbenBot.Services.Storage.Library.Audio;
 
 namespace WenigerTorbenBot.Audio.AudioSource;

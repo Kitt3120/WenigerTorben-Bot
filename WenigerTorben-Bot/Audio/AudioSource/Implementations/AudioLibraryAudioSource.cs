@@ -6,7 +6,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Discord.WebSocket;
 using Serilog;
-using WenigerTorbenBot.Audio.AudioSource.Metadata;
+using WenigerTorbenBot.Metadata;
 using WenigerTorbenBot.Services;
 using WenigerTorbenBot.Services.Storage.Library.Audio;
 using WenigerTorbenBot.Storage;

@@ -10,6 +10,7 @@ public class LibraryStorageEntry<T>
 {
     //These have to be public readonly properties to be seen as data by the JSON serializer
 
+    //TODO: Replace with IAudioSourceMetadata
     public string Id { get; private set; }
     public string Title { get; private set; }
     public string? Description { get; private set; }
