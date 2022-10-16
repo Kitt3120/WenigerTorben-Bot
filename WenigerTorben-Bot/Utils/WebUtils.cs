@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Net.Http;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using WenigerTorbenBot.Audio.AudioSource;
 using WenigerTorbenBot.Services;
@@ -45,6 +46,22 @@ public class WebUtils
             httpClient.Dispose();
 
         return buffer;
+    }
+
+    public static async Task<string> GetTitle(Uri uri, HttpClient? httpClient = null)
+    {
+        bool noHttpClientGiven = httpClient is null;
+        if (noHttpClientGiven)
+            httpClient = new HttpClient();
+
+        string response = await httpClient.GetStringAsync(uri);
+        string title = Regex.Match(response, @"\<title\b[^>]*\>\s*(?<Title>[\s\S]*?)\</title\>",
+            RegexOptions.IgnoreCase).Groups["Title"].Value;
+
+        if (noHttpClientGiven)
+            httpClient.Dispose();
+
+        return title;
     }
 
     public static bool TryParseUri(string uriString, out Uri? uri) => Uri.TryCreate(uriString, UriKind.Absolute, out uri) && (uri.Scheme == Uri.UriSchemeHttp || uri.Scheme == Uri.UriSchemeHttps);
