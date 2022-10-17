@@ -5,7 +5,7 @@ namespace WenigerTorbenBot.Metadata;
 
 public interface IMetadataBuilder
 {
-    public Metadata Build();
+    public IMetadata Build();
     public IMetadataBuilder WithID(string? id);
     public IMetadataBuilder WithTitle(string? title);
     public IMetadataBuilder WithDescription(string? description);

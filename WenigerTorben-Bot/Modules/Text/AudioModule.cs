@@ -259,7 +259,7 @@ public class AudioModule : ModuleBase<SocketCommandContext>
             await audioSource.WhenMetadataLoaded();
             IMetadata sourceMetadata = audioSource.GetAudioSourceMetadata();
 
-            Metadata.Metadata metadata = new MetadataBuilder()
+            IMetadata metadata = new MetadataBuilder()
                                     .WithID(Guid.NewGuid().ToString())
                                     .WithTitle(title)
                                     .WithDescription(description ?? sourceMetadata.Description)
@@ -270,6 +270,15 @@ public class AudioModule : ModuleBase<SocketCommandContext>
                                     .WithExtras(extrasDictionary ?? sourceMetadata.Extras)
                                     .Build();
 
+            //Dirty solution
+            //TODO: Better implementation
+            if (metadata is not Metadata.Metadata correctMetadata)
+            {
+                Log.Error("Error while trying to import media from {url} into AudioLibraryStorage of guild {guild}.", url, Context.Guild.Id.ToString());
+                await ReplyAsync($"Sorry {Context.User.Mention}, an error occured while importing the audio: Incorrect metadata type");
+                return;
+            }
+
             Log.Debug("Using AudioSource of type {audioSourceType} for request {url} by {user} on Guild {guild}.", audioSource.GetAudioSourceType(), url, Context.User.Id, Context.Guild.Id);
 
             try
@@ -277,7 +286,7 @@ public class AudioModule : ModuleBase<SocketCommandContext>
                 await audioSource.WhenContentPrepared(true);
                 using MemoryStream memoryStream = new MemoryStream();
                 await audioSource.StreamAsync(memoryStream);
-                await libraryStorage.ImportAsync(metadata, memoryStream.GetBuffer());
+                await libraryStorage.ImportAsync(correctMetadata, memoryStream.GetBuffer());
                 await message.ModifyAsync(message => message.Content = "Audio has been added to the guild's library");
             }
             catch (Exception e)

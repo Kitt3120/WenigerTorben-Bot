@@ -12,7 +12,7 @@ public class MetadataBuilder : IMetadataBuilder
         metadata = new Metadata();
     }
 
-    public Metadata Build() => metadata;
+    public IMetadata Build() => metadata;
 
     public IMetadataBuilder WithID(string? id)
     {
