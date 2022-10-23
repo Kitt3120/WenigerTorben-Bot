@@ -14,8 +14,8 @@ public class AudioRequestQueue : IAudioRequestQueue
     public int Count => queue.Count;
     public bool IsEmpty => !queue.Any(); //Should be fine without lock
 
-    public event EventHandler<AudioRequestQueueEventArgs>? OnEnqueue;
-    public event EventHandler<AudioRequestQueueEventArgs>? OnDequeue;
+    public event EventHandler<QueueEventArgs>? OnEnqueue;
+    public event EventHandler<QueueEventArgs>? OnDequeue;
 
     private readonly object queueLock;
     private readonly List<IAudioRequest> queue;
@@ -49,7 +49,7 @@ public class AudioRequestQueue : IAudioRequestQueue
             }
         }
 
-        OnEnqueue?.Invoke(this, new AudioRequestQueueEventArgs(audioRequest, position.Value));
+        OnEnqueue?.Invoke(this, new QueueEventArgs(audioRequest, position.Value));
         return position.Value;
     }
 
@@ -60,7 +60,7 @@ public class AudioRequestQueue : IAudioRequestQueue
             int? position = GetPosition(audioRequest);
             if (position is not null && queue.Remove(audioRequest))
             {
-                OnDequeue?.Invoke(this, new AudioRequestQueueEventArgs(audioRequest, position.Value));
+                OnDequeue?.Invoke(this, new QueueEventArgs(audioRequest, position.Value));
                 return true;
             }
             return false;
@@ -76,7 +76,7 @@ public class AudioRequestQueue : IAudioRequestQueue
                 return false;
 
             queue.RemoveAt(position);
-            OnDequeue?.Invoke(this, new AudioRequestQueueEventArgs(audioRequest, position));
+            OnDequeue?.Invoke(this, new QueueEventArgs(audioRequest, position));
             return true;
         }
     }

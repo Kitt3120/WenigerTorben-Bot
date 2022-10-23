@@ -8,8 +8,8 @@ public interface IAudioRequestQueue
     public int Count { get; }
     public bool IsEmpty { get; }
 
-    public event EventHandler<AudioRequestQueueEventArgs>? OnEnqueue;
-    public event EventHandler<AudioRequestQueueEventArgs>? OnDequeue;
+    public event EventHandler<QueueEventArgs>? OnEnqueue;
+    public event EventHandler<QueueEventArgs>? OnDequeue;
 
     public int Enqueue(IAudioRequest audioRequest, int? position = null);
     public bool Dequeue(IAudioRequest audioRequest);
