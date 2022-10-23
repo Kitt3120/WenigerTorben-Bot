@@ -4,6 +4,8 @@ using System.Collections.Immutable;
 using System.Linq;
 using AngleSharp.Common;
 using AngleSharp.Dom.Events;
+using Serilog;
+using Serilog.Core;
 
 namespace WenigerTorbenBot.Audio.Queueing;
 
@@ -12,8 +14,8 @@ public class AudioRequestQueue : IAudioRequestQueue
     public int Count => queue.Count;
     public bool IsEmpty => !queue.Any(); //Should be fine without lock
 
-    public event EventHandler? OnEnqueue;
-    public event EventHandler? OnDequeue;
+    public event EventHandler<AudioRequestQueueEventArgs>? OnEnqueue;
+    public event EventHandler<AudioRequestQueueEventArgs>? OnDequeue;
 
     private readonly object queueLock;
     private readonly List<IAudioRequest> queue;
@@ -47,7 +49,7 @@ public class AudioRequestQueue : IAudioRequestQueue
             }
         }
 
-        OnEnqueue?.Invoke(this, new AudioRequestQueueEventArgs(audioRequest));
+        OnEnqueue?.Invoke(this, new AudioRequestQueueEventArgs(audioRequest, position.Value));
         return position.Value;
     }
 
@@ -55,9 +57,10 @@ public class AudioRequestQueue : IAudioRequestQueue
     {
         lock (queueLock)
         {
-            if (queue.Remove(audioRequest))
+            int? position = GetPosition(audioRequest);
+            if (position is not null && queue.Remove(audioRequest))
             {
-                OnDequeue?.Invoke(this, new AudioRequestQueueEventArgs(audioRequest));
+                OnDequeue?.Invoke(this, new AudioRequestQueueEventArgs(audioRequest, position.Value));
                 return true;
             }
             return false;
@@ -73,7 +76,7 @@ public class AudioRequestQueue : IAudioRequestQueue
                 return false;
 
             queue.RemoveAt(position);
-            OnDequeue?.Invoke(this, new AudioRequestQueueEventArgs(audioRequest));
+            OnDequeue?.Invoke(this, new AudioRequestQueueEventArgs(audioRequest, position));
             return true;
         }
     }
