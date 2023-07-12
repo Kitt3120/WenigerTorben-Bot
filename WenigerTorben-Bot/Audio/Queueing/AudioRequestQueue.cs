@@ -55,30 +55,44 @@ public class AudioRequestQueue : IAudioRequestQueue
 
     public bool Dequeue(IAudioRequest audioRequest)
     {
+        int? position = GetPosition(audioRequest);
+        if (position is null)
+            return false;
+
         lock (queueLock)
         {
-            int? position = GetPosition(audioRequest);
-            if (position is not null && queue.Remove(audioRequest))
+            if (!queue.Remove(audioRequest))
             {
-                OnDequeue?.Invoke(this, new QueueEventArgs(audioRequest, position.Value));
-                return true;
+                Log.Warning("Could not remove audio request from queue: No element at position {Position}", position);
+                return false;
             }
-            return false;
         }
+
+        OnDequeue?.Invoke(this, new QueueEventArgs(audioRequest, position.Value));
+        return true;
     }
 
     public bool Dequeue(int position)
     {
+        IAudioRequest? audioRequest = GetAtPosition(position);
+        if (audioRequest is null)
+            return false;
+
         lock (queueLock)
         {
-            IAudioRequest? audioRequest = GetAtPosition(position);
-            if (audioRequest is null)
+            try
+            {
+                queue.RemoveAt(position);
+            }
+            catch (ArgumentOutOfRangeException e)
+            {
+                Log.Warning(e, "Could not remove audio request from queue: No element at position {Position}", position);
                 return false;
-
-            queue.RemoveAt(position);
-            OnDequeue?.Invoke(this, new QueueEventArgs(audioRequest, position));
-            return true;
+            }
         }
+
+        OnDequeue?.Invoke(this, new QueueEventArgs(audioRequest, position));
+        return true;
     }
 
     public bool Swap(IAudioRequest audioRequest1, IAudioRequest audioRequest2)
@@ -114,7 +128,6 @@ public class AudioRequestQueue : IAudioRequestQueue
     }
 
     //Locking even for just read operations is a good idea, check https://stackoverflow.com/a/1668984
-
     public int? GetPosition(IAudioRequest audioRequest)
     {
         lock (queueLock)
