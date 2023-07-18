@@ -22,7 +22,7 @@ public class AudioSession : IAudioSession
     public int Bitrate { get; set; }
     public int BufferMillis { get; set; }
     public int StepSize => Convert.ToInt32(((Bitrate / 8.0D) / (BufferMillis / 1000.0D)) / 2);
-    public bool Paused => !pauseEvent.WaitOne(0);
+    public bool Paused => !pauseResetEvent.WaitOne(0);
     public bool HasReachedEnd
     {
         get
@@ -30,7 +30,7 @@ public class AudioSession : IAudioSession
             lock (reachedEndLock)
                 return reachedEnd;
         }
-        set
+        private set
         {
             lock (reachedEndLock)
                 reachedEnd = value;
@@ -61,12 +61,18 @@ public class AudioSession : IAudioSession
                     value = AudioRequestQueue.Count - 1;
             }
 
+            int previousPosition = position;
+
             lock (positionLock)
                 position = value;
+
+            OnPositionChange?.Invoke(this, new PositionChangeEventArgs(previousPosition, value));
         }
     }
 
-    private readonly ManualResetEvent pauseEvent;
+    public EventHandler<PositionChangeEventArgs>? OnPositionChange;
+
+    private readonly ManualResetEvent pauseResetEvent;
     private readonly object skipLock;
     private bool skipRequested;
     private readonly object reachedEndLock;
@@ -89,7 +95,7 @@ public class AudioSession : IAudioSession
         this.BufferMillis = bufferMillis;
         this.AudioRequestQueue = new AudioRequestQueue();
 
-        this.pauseEvent = new ManualResetEvent(false);
+        this.pauseResetEvent = new ManualResetEvent(false);
         this.skipLock = new object();
         this.skipRequested = false;
         this.reachedEndLock = new object();
@@ -124,12 +130,12 @@ public class AudioSession : IAudioSession
             Position = AudioRequestQueue.Count - 1;
     }
 
-    public void Pause() => pauseEvent.Reset();
+    public void Pause() => pauseResetEvent.Reset();
 
     public void Resume()
     {
         HasReachedEnd = false;
-        pauseEvent.Set();
+        pauseResetEvent.Set();
     }
 
     public void Skip()
@@ -151,7 +157,7 @@ public class AudioSession : IAudioSession
     {
         while (true)
         {
-            pauseEvent.WaitOne();
+            pauseResetEvent.WaitOne();
 
             if (AudioRequestQueue.IsEmpty || HasReachedEnd)
             {
@@ -250,7 +256,7 @@ public class AudioSession : IAudioSession
                     else
                         await Task.Delay(BufferMillis / 2); //Let streams buffer a bit in case audio output is faster than input
 
-                    pauseEvent.WaitOne();
+                    pauseResetEvent.WaitOne();
                     lock (skipLock)
                         if (skipRequested)
                         {
