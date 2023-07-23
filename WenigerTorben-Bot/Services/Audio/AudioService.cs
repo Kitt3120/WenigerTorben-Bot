@@ -41,11 +41,11 @@ public class AudioService : Service, IAudioService
 
     }
 
-    public int Enqueue(AudioRequest audioRequest) => GetAudioSession(audioRequest.Requestor.Guild).AudioRequestQueue.Enqueue(audioRequest);
+    public int Enqueue(AudioRequest audioRequest, int? position = null) => GetAudioSession(audioRequest.Requestor.Guild).AudioRequestQueue.Enqueue(audioRequest, position);
 
-    public void Dequeue(AudioRequest audioRequest) => GetAudioSession(audioRequest.Requestor.Guild).AudioRequestQueue.Dequeue(audioRequest);
+    public bool Dequeue(AudioRequest audioRequest) => GetAudioSession(audioRequest.Requestor.Guild).AudioRequestQueue.Dequeue(audioRequest);
 
-    public void Dequeue(IGuild guild, int id) => GetAudioSession(guild).AudioRequestQueue.Dequeue(id);
+    public bool Dequeue(IGuild guild, int position) => GetAudioSession(guild).AudioRequestQueue.Dequeue(position);
 
     public int? GetPosition(AudioRequest audioRequest) => GetAudioSession(audioRequest.Requestor.Guild).AudioRequestQueue.GetPosition(audioRequest);
 

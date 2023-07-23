@@ -40,7 +40,7 @@ public class AudioModule : ModuleBase<SocketCommandContext>
     [Command("play")]
     [Alias(new string[] { "p", "pl" })]
     [Summary("Enqueues an audio request")]
-    public async Task Play(string? request = null)
+    public async Task Play(string? request = null, int? position = null)
     {
         if (Context.User is not IGuildUser guildUser || Context.Channel is not ITextChannel textChannel)
         {
@@ -69,9 +69,12 @@ public class AudioModule : ModuleBase<SocketCommandContext>
         }
 
         AudioRequest audioRequest = new AudioRequest(guildUser, voiceChannel, textChannel, request, audioSource);
-        int position = audioService.Enqueue(audioRequest);
 
-        await ReplyAsync($"{Context.User.Mention}, your request has been added to the queue in position {position + 1}");
+        if (position is not null)
+            position--;
+        int insertedPosition = audioService.Enqueue(audioRequest, position);
+
+        await ReplyAsync($"{Context.User.Mention}, your request has been added to the queue in position {insertedPosition + 1}");
     }
 
     [Command("pause")]
