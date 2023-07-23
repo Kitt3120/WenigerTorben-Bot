@@ -70,11 +70,14 @@ public class AudioSession : IAudioSession
         }
     }
 
-    public EventHandler<PositionChangeEventArgs>? OnPositionChange;
+    public EventHandler<PositionChangeEventArgs>? OnPositionChange { get; set; }
 
     private readonly ManualResetEvent pauseResetEvent;
-    private readonly object skipLock;
+    private readonly ManualResetEvent softPauseResetEvent;
+    private readonly object skipRequestLock;
     private bool skipRequested;
+    private readonly object softSkipRequestLock;
+    private bool softSkipRequested;
     private readonly object reachedEndLock;
     private bool reachedEnd;
     private readonly object positionLock;
@@ -95,9 +98,12 @@ public class AudioSession : IAudioSession
         this.BufferMillis = bufferMillis;
         this.AudioRequestQueue = new AudioRequestQueue();
 
-        this.pauseResetEvent = new ManualResetEvent(false);
-        this.skipLock = new object();
+        this.pauseResetEvent = new ManualResetEvent(true);
+        this.softPauseResetEvent = new ManualResetEvent(true);
+        this.skipRequestLock = new object();
+        this.softSkipRequestLock = new object();
         this.skipRequested = false;
+        this.softSkipRequested = false;
         this.reachedEndLock = new object();
         this.reachedEnd = true;
         this.positionLock = new object();
@@ -107,41 +113,91 @@ public class AudioSession : IAudioSession
 
         AudioRequestQueue.OnEnqueue += OnEnqueueRequest;
         AudioRequestQueue.OnDequeue += OnDequeueRequest;
+        AudioRequestQueue.OnSwap += OnSwapRequests;
 
 
         this.queueThread.Start();
     }
 
-    private void OnEnqueueRequest(object? sender, EventArgs e)
+    private void OnEnqueueRequest(object? sender, QueueEventArgs e)
     {
-        if (HasReachedEnd)
+        if (AudioRequestQueue.Count == 1)
         {
-            if (AudioRequestQueue.Count > 1)
-                Position++; //This also sets HasReachedEnd to false
-            else
-                HasReachedEnd = false;
-            Resume();
+            Position = 0;
+            softPauseResetEvent.Set();
+        }
+        else
+        {
+            bool hadReachedEnd = HasReachedEnd;
+
+            if (e.Position <= Position)
+            {
+                Position++;
+                HasReachedEnd = hadReachedEnd;
+            }
+            else if (HasReachedEnd)
+            {
+                Position++;
+                softPauseResetEvent.Set();
+            }
         }
     }
 
-    private void OnDequeueRequest(object? sender, EventArgs e)
+    private void OnDequeueRequest(object? sender, QueueEventArgs e)
     {
-        if (Position >= AudioRequestQueue.Count)
-            Position = AudioRequestQueue.Count - 1;
+        if (AudioRequestQueue.Count == 0)
+        {
+            Position = 0;
+            HasReachedEnd = true;
+            softPauseResetEvent.Reset();
+        }
+        else
+        {
+            bool hadReachedEnd = HasReachedEnd;
+
+            if (e.Position == Position)
+            {
+                if (e.Position == AudioRequestQueue.Count)
+                {
+                    Position--;
+                    HasReachedEnd = true;
+                }
+
+                if (!hadReachedEnd)
+                    lock (softSkipRequestLock)
+                        softSkipRequested = true;
+            }
+            else if (e.Position < Position)
+            {
+                Position--;
+                HasReachedEnd = hadReachedEnd;
+            }
+        }
+    }
+
+    private void OnSwapRequests(object? sender, QueueSwapEventArgs e)
+    {
+        if (e.Position1 == Position)
+            Position = e.Position2;
+        else if (e.Position2 == Position)
+            Position = e.Position1;
     }
 
     public void Pause() => pauseResetEvent.Reset();
 
     public void Resume()
     {
-        HasReachedEnd = false;
+        if (HasReachedEnd)
+            Position = 0;
+
+        softPauseResetEvent.Set();
         pauseResetEvent.Set();
     }
 
     public void Skip()
     {
         if (!HasReachedEnd)
-            lock (skipLock)
+            lock (skipRequestLock)
                 skipRequested = true;
     }
 
@@ -157,15 +213,16 @@ public class AudioSession : IAudioSession
     {
         while (true)
         {
+            softPauseResetEvent.WaitOne();
             pauseResetEvent.WaitOne();
 
             if (AudioRequestQueue.IsEmpty || HasReachedEnd)
             {
-                Pause();
+                softPauseResetEvent.Reset();
                 continue;
             }
 
-            lock (skipLock)
+            lock (skipRequestLock)
             {
                 if (skipRequested)
                 {
@@ -257,13 +314,15 @@ public class AudioSession : IAudioSession
                         await Task.Delay(BufferMillis / 2); //Let streams buffer a bit in case audio output is faster than input
 
                     pauseResetEvent.WaitOne();
-                    lock (skipLock)
-                        if (skipRequested)
-                        {
-                            skipRequested = false;
-                            break;
-                        }
-
+                    lock (softSkipRequestLock)
+                    {
+                        lock (skipRequestLock)
+                            if (skipRequested || softSkipRequested)
+                            {
+                                skipRequested = false;
+                                break;
+                            }
+                    }
 
                     if (!streamTask.IsCompleted) //If new input is still being streamed, update reference in case a new buffer has been allocated by memoryStream
                         lock (bufferLock)
@@ -280,7 +339,13 @@ public class AudioSession : IAudioSession
             }
             finally
             {
-                Next();
+                lock (softSkipRequestLock)
+                {
+                    if (!softSkipRequested)
+                        Next();
+                    else
+                        softSkipRequested = false;
+                }
             }
         }
     }

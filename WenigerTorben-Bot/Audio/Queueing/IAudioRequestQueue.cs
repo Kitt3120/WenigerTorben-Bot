@@ -10,6 +10,8 @@ public interface IAudioRequestQueue
 
     public event EventHandler<QueueEventArgs>? OnEnqueue;
     public event EventHandler<QueueEventArgs>? OnDequeue;
+    public event EventHandler<QueueSwapEventArgs>? OnSwap;
+    public event EventHandler? OnUpdate;
 
     public int Enqueue(IAudioRequest audioRequest, int? position = null);
     public bool Dequeue(IAudioRequest audioRequest);

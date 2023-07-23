@@ -16,6 +16,8 @@ public class AudioRequestQueue : IAudioRequestQueue
 
     public event EventHandler<QueueEventArgs>? OnEnqueue;
     public event EventHandler<QueueEventArgs>? OnDequeue;
+    public event EventHandler<QueueSwapEventArgs>? OnSwap;
+    public event EventHandler? OnUpdate;
 
     private readonly object queueLock;
     private readonly List<IAudioRequest> queue;
@@ -50,6 +52,7 @@ public class AudioRequestQueue : IAudioRequestQueue
         }
 
         OnEnqueue?.Invoke(this, new QueueEventArgs(audioRequest, position.Value));
+        OnUpdate?.Invoke(this, EventArgs.Empty);
         return position.Value;
     }
 
@@ -69,6 +72,7 @@ public class AudioRequestQueue : IAudioRequestQueue
         }
 
         OnDequeue?.Invoke(this, new QueueEventArgs(audioRequest, position.Value));
+        OnUpdate?.Invoke(this, EventArgs.Empty);
         return true;
     }
 
@@ -92,6 +96,7 @@ public class AudioRequestQueue : IAudioRequestQueue
         }
 
         OnDequeue?.Invoke(this, new QueueEventArgs(audioRequest, position));
+        OnUpdate?.Invoke(this, EventArgs.Empty);
         return true;
     }
 
@@ -107,6 +112,9 @@ public class AudioRequestQueue : IAudioRequestQueue
 
             queue[index1.Value] = audioRequest2;
             queue[index2.Value] = audioRequest1;
+
+            OnSwap?.Invoke(this, new QueueSwapEventArgs(audioRequest1, audioRequest2, index1.Value, index2.Value));
+            OnUpdate?.Invoke(this, EventArgs.Empty);
             return true;
         }
     }
@@ -123,6 +131,9 @@ public class AudioRequestQueue : IAudioRequestQueue
 
             queue[position1] = audioRequest2;
             queue[position2] = audioRequest1;
+
+            OnSwap?.Invoke(this, new QueueSwapEventArgs(audioRequest1, audioRequest2, position1, position2));
+            OnUpdate?.Invoke(this, EventArgs.Empty);
             return true;
         }
     }

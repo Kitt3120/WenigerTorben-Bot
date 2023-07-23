@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using Discord;
 using Discord.Audio;
@@ -17,6 +18,7 @@ public interface IAudioSession
     public bool HasReachedEnd { get; }
     public IAudioRequestQueue AudioRequestQueue { get; }
     public int Position { get; set; }
+    public EventHandler<PositionChangeEventArgs>? OnPositionChange { get; set; }
 
     public void Pause();
     public void Resume();

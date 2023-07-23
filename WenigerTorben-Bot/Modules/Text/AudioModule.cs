@@ -50,7 +50,7 @@ public class AudioModule : ModuleBase<SocketCommandContext>
 
         if (string.IsNullOrWhiteSpace(request))
         {
-            await ReplyAsync("Sorry, you actually did not request any media I should play. Try again!");
+            await ReplyAsync("Sorry, you did not specify any media I should play. Try again!");
             return;
         }
 
@@ -124,8 +124,61 @@ public class AudioModule : ModuleBase<SocketCommandContext>
         }
     }
 
-    [Command("audio")]
-    [Alias("a")]
+    [Command("queue")]
+    [Alias(new string[] { "q", "qu" })]
+    [Summary("Prints the current queue")]
+    public async Task Queue()
+    {
+        if (Context.User is not IGuildUser || Context.Channel is not ITextChannel)
+        {
+            await ReplyAsync("This command is only available on guilds");
+            return;
+        }
+
+        IAudioSession audioSession = audioService.GetAudioSession(Context.Guild);
+
+        List<EmbedFieldBuilder> embedFields = new List<EmbedFieldBuilder>();
+        foreach (KeyValuePair<int, IAudioRequest> requestPair in audioSession.AudioRequestQueue.GetQueueAsDictionary())
+        {
+            EmbedFieldBuilder embedFieldBuilder = new EmbedFieldBuilder()
+            .WithName($"{(requestPair.Key == audioSession.Position ? "* " : "")}#{requestPair.Key + 1} {requestPair.Value.Request}")
+            .WithValue($"Requested by {requestPair.Value.Requestor.Mention}");
+            embedFields.Add(embedFieldBuilder);
+        }
+
+        EmbedBuilder embedBuilder = new EmbedBuilder();
+        embedBuilder.WithTitle("Queue");
+        embedBuilder.WithColor(Color.Red);
+        embedBuilder.WithFields(embedFields);
+        await ReplyAsync(embed: embedBuilder.Build());
+
+    }
+
+    [Command("queueremove")]
+    [Alias(new string[] { "queuerm", "qremove", "qurm", "qrm" })]
+    [Summary("Removes a request from the queue")]
+    public async Task RemoveFromQueue(int position)
+    {
+        if (Context.User is not IGuildUser || Context.Channel is not ITextChannel)
+        {
+            await ReplyAsync("This command is only available on guilds");
+            return;
+        }
+
+        IAudioSession audioSession = audioService.GetAudioSession(Context.Guild);
+        if (position < 1 || position > audioSession.AudioRequestQueue.Count)
+        {
+            await ReplyAsync($"{Context.User.Mention}, the given position is out of range");
+            return;
+        }
+
+        audioSession.AudioRequestQueue.Dequeue(position - 1);
+        await ReplyAsync($"{Context.User.Mention}, request at position {position} has been removed from the queue");
+    }
+
+
+    [Command("audiolibrary")]
+    [Alias("audiol", "alibrary", "alib", "al")]
     [Summary("Manages the audio library of your guild")]
     public async Task Audio(string? subcommand = null, string? url = null, string? title = null, string? description = null, string? tags = null, string? extras = null)
     {
@@ -133,9 +186,9 @@ public class AudioModule : ModuleBase<SocketCommandContext>
         if (subcommand is null)
         {
             List<EmbedFieldBuilder> embedFields = new List<EmbedFieldBuilder>();
-            embedFields.Add(new EmbedFieldBuilder().WithName("audio").WithValue("Prints this help"));
-            embedFields.Add(new EmbedFieldBuilder().WithName("audio list/ls").WithValue("Prints a list of available audios for this guild"));
-            embedFields.Add(new EmbedFieldBuilder().WithName("audio import/add <url> <title> [description] [tag1;tag2] [extra1=value1;extra2=value2]").WithValue("Imports audio from the web into the library of a guild"));
+            embedFields.Add(new EmbedFieldBuilder().WithName("audiolibrary").WithValue("Prints this help"));
+            embedFields.Add(new EmbedFieldBuilder().WithName("audiolibrary list/ls").WithValue("Prints a list of available audios for this guild"));
+            embedFields.Add(new EmbedFieldBuilder().WithName("audiolibrary import/add <url> <title> [description] [tag1;tag2] [extra1=value1;extra2=value2]").WithValue("Imports audio from the web into the library of a guild"));
 
             EmbedBuilder embedBuilder = new EmbedBuilder();
             embedBuilder.WithTitle("Audio commands");
