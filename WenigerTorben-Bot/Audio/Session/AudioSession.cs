@@ -150,6 +150,8 @@ public class AudioSession : IAudioSession
             Position = 0;
             HasReachedEnd = true;
             softPauseResetEvent.Reset();
+            lock (softSkipRequestLock)
+                softSkipRequested = true;
         }
         else
         {
@@ -314,9 +316,9 @@ public class AudioSession : IAudioSession
                         await Task.Delay(BufferMillis / 2); //Let streams buffer a bit in case audio output is faster than input
 
                     pauseResetEvent.WaitOne();
-                    lock (softSkipRequestLock)
+                    lock (skipRequestLock)
                     {
-                        lock (skipRequestLock)
+                        lock (softSkipRequestLock)
                             if (skipRequested || softSkipRequested)
                             {
                                 skipRequested = false;
