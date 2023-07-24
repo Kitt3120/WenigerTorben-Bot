@@ -8,7 +8,7 @@ using WenigerTorbenBot.Services.FFmpeg;
 using WenigerTorbenBot.Services.File;
 using WenigerTorbenBot.Utils;
 
-namespace WenigerTorbenBot.Audio.AudioSource;
+namespace WenigerTorbenBot.Audio.Source;
 
 public class WebAudioSource : AudioSource
 {

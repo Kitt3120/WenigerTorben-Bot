@@ -5,7 +5,7 @@ using System.Linq;
 using System.Net.Http;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
-using WenigerTorbenBot.Audio.AudioSource;
+using WenigerTorbenBot.Audio.Source;
 using WenigerTorbenBot.Services;
 using WenigerTorbenBot.Services.FFmpeg;
 using WenigerTorbenBot.Services.File;

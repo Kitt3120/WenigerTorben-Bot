@@ -6,12 +6,12 @@ using System.IO;
 using System.Threading.Tasks;
 using Discord.WebSocket;
 using Serilog;
-using WenigerTorbenBot.Audio.AudioSource.Implementations;
 using WenigerTorbenBot.Audio.Queueing;
+using WenigerTorbenBot.Audio.Source.Implementations;
 using WenigerTorbenBot.Metadata;
 using WenigerTorbenBot.Services.Storage.Library.Audio;
 
-namespace WenigerTorbenBot.Audio.AudioSource;
+namespace WenigerTorbenBot.Audio.Source;
 
 public abstract class AudioSource : IAudioSource
 {

@@ -1,4 +1,4 @@
-namespace WenigerTorbenBot.Audio.AudioSource;
+namespace WenigerTorbenBot.Audio.Source;
 
 public enum AudioSourceType
 {

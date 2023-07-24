@@ -6,7 +6,7 @@ using WenigerTorbenBot.Metadata;
 using WenigerTorbenBot.Services;
 using WenigerTorbenBot.Services.FFmpeg;
 
-namespace WenigerTorbenBot.Audio.AudioSource.Implementations;
+namespace WenigerTorbenBot.Audio.Source.Implementations;
 
 public class FileAudioSource : AudioSource
 {

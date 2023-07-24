@@ -9,7 +9,7 @@ using WenigerTorbenBot.Services.Storage.Library.Audio;
 using WenigerTorbenBot.Storage;
 using WenigerTorbenBot.Storage.Library;
 
-namespace WenigerTorbenBot.Audio.AudioSource.Implementations;
+namespace WenigerTorbenBot.Audio.Source.Implementations;
 
 public class AudioLibraryAudioSource : AudioSource
 {

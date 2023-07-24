@@ -4,7 +4,7 @@ using System.IO;
 using System.Threading.Tasks;
 using WenigerTorbenBot.Metadata;
 
-namespace WenigerTorbenBot.Audio.AudioSource;
+namespace WenigerTorbenBot.Audio.Source;
 
 public interface IAudioSource
 {

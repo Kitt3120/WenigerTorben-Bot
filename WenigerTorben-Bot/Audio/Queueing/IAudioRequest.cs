@@ -1,5 +1,5 @@
 using Discord;
-using WenigerTorbenBot.Audio.AudioSource;
+using WenigerTorbenBot.Audio.Source;
 
 namespace WenigerTorbenBot.Audio.Queueing;
 

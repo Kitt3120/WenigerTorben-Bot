@@ -11,7 +11,7 @@ using WenigerTorbenBot.Services.YouTube;
 using WenigerTorbenBot.Utils;
 using YoutubeExplode.Videos;
 
-namespace WenigerTorbenBot.Audio.AudioSource;
+namespace WenigerTorbenBot.Audio.Source;
 
 public class YouTubeAudioSource : AudioSource
 {
