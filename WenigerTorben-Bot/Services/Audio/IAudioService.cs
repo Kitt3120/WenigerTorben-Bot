@@ -13,6 +13,7 @@ public interface IAudioService : IService
     public int? GetPosition(AudioRequest audioRequest);
     public void Pause(IGuild guild);
     public void Resume(IGuild guild);
+    public void Previous(IGuild guild);
     public void Skip(IGuild guild);
     public IAudioSession GetAudioSession(IGuild guild);
 }

@@ -107,8 +107,31 @@ public class AudioModule : ModuleBase<SocketCommandContext>
         await ReplyAsync("Audio session resumed");
     }
 
+    [Command("previous")]
+    [Alias(new string[] { "prev", "pr" })]
+    [Summary("Skips to the previous track")]
+    public async Task Previous()
+    {
+        if (Context.User is not IGuildUser || Context.Channel is not ITextChannel)
+        {
+            await ReplyAsync("This command is only available on guilds");
+            return;
+        }
+
+        IAudioSession audioSession = audioService.GetAudioSession(Context.Guild);
+        if (audioSession.AudioRequestQueue.Count == 0)
+            await ReplyAsync($"{Context.User.Mention}, nothing is playing");
+        else if (audioSession.Position == 0)
+            await ReplyAsync($"{Context.User.Mention}, you are already at the beginning of the queue");
+        else
+        {
+            audioSession.Previous();
+            await ReplyAsync($"{Context.User.Mention}, previous track requested");
+        }
+    }
+
     [Command("skip")]
-    [Summary("Skips the current track")]
+    [Summary("Skips to the next track")]
     public async Task Skip()
     {
         if (Context.User is not IGuildUser || Context.Channel is not ITextChannel)
@@ -118,8 +141,10 @@ public class AudioModule : ModuleBase<SocketCommandContext>
         }
 
         IAudioSession audioSession = audioService.GetAudioSession(Context.Guild);
-        if (audioSession.HasReachedEnd)
+        if (audioSession.AudioRequestQueue.Count == 0)
             await ReplyAsync($"{Context.User.Mention}, nothing is playing");
+        else if (audioSession.HasReachedEnd)
+            await ReplyAsync($"{Context.User.Mention}, you are already at the end of the queue");
         else
         {
             audioSession.Skip();

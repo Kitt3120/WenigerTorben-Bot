@@ -22,5 +22,6 @@ public interface IAudioSession
 
     public void Pause();
     public void Resume();
+    public void Previous();
     public void Skip();
 }

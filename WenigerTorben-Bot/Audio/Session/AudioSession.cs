@@ -203,6 +203,16 @@ public class AudioSession : IAudioSession
                 skipRequested = true;
     }
 
+    public void Previous()
+    {
+        if (Position > 0)
+            Position--;
+
+        if (!HasReachedEnd)
+            lock (softSkipRequestLock)
+                softSkipRequested = true;
+    }
+
     private void Next()
     {
         if (Position == AudioRequestQueue.Count - 1)
