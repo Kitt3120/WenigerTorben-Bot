@@ -8,10 +8,14 @@ namespace WenigerTorbenBot.Audio.Source;
 
 public interface IAudioSource
 {
-    public Task WhenMetadataLoaded();
-    public IMetadata GetAudioSourceMetadata();
-    public void BeginPrepareContent();
-    public Task WhenContentPrepared(bool autoStartContentPreparation = false);
+    public AudioSourceType AudioSourceType { get; }
+    public Task MetadataLoadTask { get; }
+    public bool MetadataLoaded { get; }
+    public Task WhenMetadataLoadedAsync();
+    public IMetadata? Metadata { get; }
+    public Task? ContentPreparationTask { get; }
+    public bool ContentPrepared { get; }
+    public void PrepareContent();
+    public Task WhenContentPreparedAsync(int millisecondsDelay = 1000);
     public Task StreamAsync(Stream output);
-    public AudioSourceType GetAudioSourceType();
 }

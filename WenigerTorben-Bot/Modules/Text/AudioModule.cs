@@ -333,12 +333,19 @@ public class AudioModule : ModuleBase<SocketCommandContext>
             IAudioSource? audioSource = AudioSource.Create(Context.Guild, url);
             if (audioSource is null)
             {
-                await ReplyAsync("No fitting AudioSource found for the given url");
+                await ReplyAsync("No applicable audio source was found for the given URL");
                 return;
             }
 
-            await audioSource.WhenMetadataLoaded();
-            IMetadata sourceMetadata = audioSource.GetAudioSourceMetadata();
+
+            await audioSource.WhenMetadataLoadedAsync();
+            IMetadata? sourceMetadata = audioSource.Metadata;
+
+            if (sourceMetadata is null)
+            {
+                await ReplyAsync("Sorry, I was not able to load the metadata of the given media and therefore cannot import it");
+                return;
+            }
 
             IMetadata metadata = new MetadataBuilder()
                                     .WithID(Guid.NewGuid().ToString())
@@ -360,11 +367,10 @@ public class AudioModule : ModuleBase<SocketCommandContext>
                 return;
             }
 
-            Log.Debug("Using AudioSource of type {audioSourceType} for request {url} by {user} on Guild {guild}.", audioSource.GetAudioSourceType(), url, Context.User.Id, Context.Guild.Id);
+            Log.Debug("Using AudioSource of type {audioSourceType} for request {url} by {user} on Guild {guild}.", audioSource.AudioSourceType, url, Context.User.Id, Context.Guild.Id);
 
             try
             {
-                await audioSource.WhenContentPrepared(true);
                 using MemoryStream memoryStream = new MemoryStream();
                 await audioSource.StreamAsync(memoryStream);
                 await libraryStorage.ImportAsync(correctMetadata, memoryStream.GetBuffer());

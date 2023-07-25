@@ -16,25 +16,26 @@ namespace WenigerTorbenBot.Utils;
 public class WebUtils
 {
 
+    private static HttpClient? httpClient;
+
+    private static HttpClient InitializeHttpClient()
+    {
+        httpClient ??= new HttpClient();
+        return httpClient;
+    }
+
     public static async Task DownloadToDiskAsync(Uri uri, string file, HttpClient? httpClient = null)
     {
-        bool noHttpClientGiven = httpClient is null;
-        if (noHttpClientGiven)
-            httpClient = new HttpClient();
+        httpClient ??= InitializeHttpClient();
 
         using FileStream fileStream = new FileStream(file, FileMode.Create);
         using Stream webStream = await httpClient.GetStreamAsync(uri);
         await webStream.CopyToAsync(fileStream);
-
-        if (noHttpClientGiven)
-            httpClient.Dispose();
     }
 
     public static async Task<byte[]> DownloadToRamAsync(Uri uri, HttpClient? httpClient = null)
     {
-        bool noHttpClientGiven = httpClient is null;
-        if (noHttpClientGiven)
-            httpClient = new HttpClient();
+        httpClient ??= InitializeHttpClient();
 
         using MemoryStream memoryStream = new MemoryStream();
         using Stream webStream = await httpClient.GetStreamAsync(uri);
@@ -42,17 +43,28 @@ public class WebUtils
 
         byte[] buffer = memoryStream.GetBuffer();
 
-        if (noHttpClientGiven)
-            httpClient.Dispose();
-
         return buffer;
+    }
+
+    public static async Task DownloadToStreamAsync(Uri uri, Stream output, HttpClient? httpClient = null)
+    {
+        httpClient ??= InitializeHttpClient();
+
+        using Stream webStream = await httpClient.GetStreamAsync(uri);
+        await webStream.CopyToAsync(output);
+    }
+
+    public static async Task StreamAsync(Uri uri, Func<Stream, Task> action, HttpClient? httpClient = null)
+    {
+        httpClient ??= InitializeHttpClient();
+
+        using Stream webStream = await httpClient.GetStreamAsync(uri);
+        await action(webStream);
     }
 
     public static async Task<string?> GetTitleAsync(Uri uri, HttpClient? httpClient = null)
     {
-        bool noHttpClientGiven = httpClient is null;
-        if (noHttpClientGiven)
-            httpClient = new HttpClient();
+        httpClient ??= InitializeHttpClient();
 
         string response = await httpClient.GetStringAsync(uri);
         Match match = Regex.Match(response, @"\<title\b[^>]*\>\s*(?<Title>[\s\S]*?)\</title\>", RegexOptions.IgnoreCase);
@@ -62,9 +74,6 @@ public class WebUtils
             title = match.Groups["Title"].Value;
         else
             title = "No title";
-
-        if (noHttpClientGiven)
-            httpClient.Dispose();
 
         return title;
     }

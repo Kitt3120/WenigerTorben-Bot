@@ -14,6 +14,7 @@ using WenigerTorbenBot.Audio.Queueing;
 
 namespace WenigerTorbenBot.Audio.Session;
 
+//TODO: Implement caching through IAudioSource.PrepareAsync()
 public class AudioSession : IAudioSession
 {
     public IGuild Guild { get; init; }
@@ -282,19 +283,13 @@ public class AudioSession : IAudioSession
             try
             {
                 if (audioStream is not null)
-                {
-                    await audioStream.FlushAsync();
                     await audioStream.DisposeAsync();
-                }
 
-                if (targetChannel != previousRequest?.VoiceChannel)
+                if (targetChannel != previousRequest?.VoiceChannel && audioClient is not null)
                 {
-                    if (audioClient is not null)
-                    {
-                        await audioClient.StopAsync();
-                        audioClient.Dispose();
-                        audioClient = null;
-                    }
+                    await audioClient.StopAsync();
+                    audioClient.Dispose();
+                    audioClient = null;
                 }
 
                 if (audioClient is null)
@@ -315,15 +310,17 @@ public class AudioSession : IAudioSession
                     if (availableBytesAmount > StepSize)
                         availableBytesAmount = StepSize;
 
-                    if (availableBytesAmount > 0)
+                    if (!streamTask.IsCompleted && availableBytesAmount < StepSize)
+                    {
+                        await Task.Delay(BufferMillis); //Let streams buffer a bit in case audio output is faster than input
+                    }
+                    else
                     {
                         //No locking of bufferLock needed, as we're just reading. Worst case we're reading from the old buffer for this iteration, which would be no problem.
                         Memory<byte> data = buffer.AsMemory(position, availableBytesAmount);
                         await audioStream.WriteAsync(data);
                         position += availableBytesAmount;
                     }
-                    else
-                        await Task.Delay(BufferMillis / 2); //Let streams buffer a bit in case audio output is faster than input
 
                     pauseResetEvent.WaitOne();
                     lock (skipRequestLock)
@@ -341,6 +338,17 @@ public class AudioSession : IAudioSession
                             buffer = memoryStream.GetBuffer();
 
                 } while (!streamTask.IsCompleted || (position < buffer.Length && position < positionLimit));
+
+                //Sometimes, FlushAsync gets stuck, so we're using a timeout here
+                using CancellationTokenSource cancellationTokenSource = new CancellationTokenSource();
+                Task flushTask = audioStream.FlushAsync(cancellationTokenSource.Token);
+                Task timeoutTask = Task.Delay(BufferMillis * 2, cancellationTokenSource.Token);
+                Task completedTask = await Task.WhenAny(flushTask, timeoutTask);
+                if (completedTask == timeoutTask)
+                {
+                    cancellationTokenSource.Cancel();
+                    Log.Warning("FlushAsync of AudioStream for request {audioRequest} in channel {channelName} ({channelId}) in guild {guildName} ({guildId}) timed out. Skipping FlushAsync call.", audioRequest.Request, audioRequest.VoiceChannel.Name, audioRequest.VoiceChannel.Id, Guild.Name, Guild.Id);
+                }
 
                 await streamTask; //Await so exception gets thrown if there was any while executing the task
             }

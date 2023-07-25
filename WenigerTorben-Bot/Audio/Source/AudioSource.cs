@@ -32,30 +32,25 @@ public abstract class AudioSource : IAudioSource
 
     protected readonly SocketGuild guild;
     protected readonly string request;
-    private readonly Task metadataLoadTask;
-    private IMetadata? audioSourceMetadata;
+    public Task MetadataLoadTask { get; init; }
+    public bool MetadataLoaded => MetadataLoadTask.IsCompleted;
+    public IMetadata? Metadata { get; private set; }
     private readonly object contentPreparationLock;
+    public Task? ContentPreparationTask { get; private set; }
+    public bool ContentPrepared => ContentPreparationTask?.IsCompleted ?? false;
     protected byte[]? contentPreparationBuffer;
-    private Task? contentPreparationTask;
 
     public AudioSource(SocketGuild guild, string request)
     {
         this.guild = guild;
         this.request = request;
-        this.metadataLoadTask = LoadMetadataAsync();
+        this.MetadataLoadTask = LoadMetadataAsync();
         this.contentPreparationLock = new object();
     }
 
-    private async Task LoadMetadataAsync() => audioSourceMetadata = await DoLoadMetadataAsync();
+    private async Task LoadMetadataAsync() => Metadata = await DoLoadMetadataAsync();
 
-    public Task WhenMetadataLoaded() => metadataLoadTask;
-
-    public IMetadata GetAudioSourceMetadata()
-    {
-        if (audioSourceMetadata is null)
-            throw new NullReferenceException("\"audioSourceMetadata\" was null. Did you await WhenMetadataLoaded() first?");
-        return audioSourceMetadata;
-    }
+    public async Task WhenMetadataLoadedAsync() => await MetadataLoadTask;
 
     private async Task PrepareContentAsync()
     {
@@ -64,56 +59,44 @@ public abstract class AudioSource : IAudioSource
         contentPreparationBuffer = memoryStream.GetBuffer();
     }
 
-    public void BeginPrepareContent()
+    public void PrepareContent()
     {
         lock (contentPreparationLock)
         {
-            if (contentPreparationTask is not null)
+            if (ContentPreparationTask is not null)
             {
-                Log.Warning("BeginPrepareContent() was called multiple times on AudioSource of type {audioSourceType} for request {request} in guild {guild}. Multiple executions of BeginPrepareContent() have been prevented.", GetAudioSourceType(), request, guild.Id);
+                Log.Warning("BeginPrepareContent() was called multiple times on AudioSource of type {audioSourceType} for request {request} in guild {guild}. Multiple executions of BeginPrepareContent() have been prevented.", AudioSourceType, request, guild.Id);
                 return;
             }
 
-            contentPreparationTask = PrepareContentAsync();
+            ContentPreparationTask = PrepareContentAsync();
         }
     }
 
-    public async Task WhenContentPrepared(bool autoStartContentPreparation = false)
+    public async Task WhenContentPreparedAsync(int millisecondsDelay = 1000)
     {
-        bool isContentPreparationTaskNull;
-        lock (contentPreparationLock)
-            isContentPreparationTaskNull = contentPreparationTask is null;
+        while (ContentPreparationTask is null) //No need for lock here, overhead is not worth it
+            await Task.Delay(millisecondsDelay);
+        await ContentPreparationTask;
 
-        if (isContentPreparationTaskNull)
-        {
-            if (autoStartContentPreparation)
-                BeginPrepareContent();
-            else
-                while (contentPreparationTask is null) //No need for lock here, overhead is not worth it
-                    await Task.Delay(1000);
-        }
-
-        await contentPreparationTask;
     }
 
     public async Task StreamAsync(Stream output)
     {
-        bool isContentPreparationTaskNull;
-        lock (contentPreparationLock)
-            isContentPreparationTaskNull = contentPreparationTask is null;
-
-        if (isContentPreparationTaskNull) //If not cached, play directly from source. Otherwise, await finish of preparation and play cached bytes
-            await DoStreamAsync(output);
+        if (ContentPreparationTask is null) //No need for lock here, overhead is not worth it
+            await DoStreamAsync(output); //If not cached, play directly from source. Otherwise, await finish of preparation and play cached bytes
         else
         {
-            await contentPreparationTask;
-            using MemoryStream memoryStream = new MemoryStream(contentPreparationBuffer, false);
-            await memoryStream.CopyToAsync(output);
+            await ContentPreparationTask;
+            if (contentPreparationBuffer is null)
+                throw new DataException("ContentPreparationTask has finished, but contentPreparationBuffer is still null");
+
+            await output.WriteAsync(contentPreparationBuffer);
+            await output.FlushAsync();
         }
     }
 
+    public abstract AudioSourceType AudioSourceType { get; }
     protected abstract Task<IMetadata> DoLoadMetadataAsync();
     protected abstract Task DoStreamAsync(Stream output);
-
-    public abstract AudioSourceType GetAudioSourceType();
 }

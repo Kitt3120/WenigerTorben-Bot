@@ -17,7 +17,7 @@ public class YouTubeAudioSource : AudioSource
 {
     public static bool IsApplicableFor(string request) => Regex.IsMatch(request, "^((?:https?:)?\\/\\/)?((?:www|music|m)\\.)?((?:youtube(-nocookie)?\\.com|youtu.be))(\\/(?:[\\w\\-]+\\?v=|embed\\/|v\\/)?)([\\w\\-]+)(\\S+)?$");
 
-    public override AudioSourceType GetAudioSourceType() => AudioSourceType.YouTube;
+    public override AudioSourceType AudioSourceType => AudioSourceType.YouTube;
 
     public YouTubeAudioSource(SocketGuild guild, string request) : base(guild, request)
     { }

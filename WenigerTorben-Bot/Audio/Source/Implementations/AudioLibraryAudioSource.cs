@@ -15,7 +15,7 @@ public class AudioLibraryAudioSource : AudioSource
 {
     public static bool IsApplicableFor(SocketGuild guild, string request) => GetLibraryStorageEntry(guild, request) is not null;
 
-    public override AudioSourceType GetAudioSourceType() => AudioSourceType.Library;
+    public override AudioSourceType AudioSourceType => AudioSourceType.AudioLibrary;
 
     public AudioLibraryAudioSource(SocketGuild guild, string request) : base(guild, request)
     { }

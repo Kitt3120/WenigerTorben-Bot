@@ -76,17 +76,19 @@ public class FFmpegService : Service, IFFmpegService
         .ProcessAsynchronously();
     }
 
-    public async Task StreamAudioAsync(Stream input, Stream output)
+    public async Task StreamAudioAsync(Stream input, Stream output) => await StreamAudioAsync(new StreamPipeSource(input), output);
+
+    public async Task StreamAudioAsync(StreamPipeSource input, Stream output)
     {
         await FFMpegArguments
-        .FromPipeInput(new StreamPipeSource(input))
-        .OutputToPipe(new StreamPipeSink(output), options =>
-        {
-            options.WithAudioSamplingRate(48000);
-            options.WithAudioBitrate(AudioQuality.Ultra);
-            options.ForceFormat("s16le");
-        })
-        .ProcessAsynchronously();
+       .FromPipeInput(input)
+       .OutputToPipe(new StreamPipeSink(output), options =>
+       {
+           options.WithAudioSamplingRate(48000);
+           options.WithAudioBitrate(AudioQuality.Ultra);
+           options.ForceFormat("s16le");
+       })
+       .ProcessAsynchronously();
     }
 
     public async Task<byte[]> ReadAudioAsync(string filepath)
@@ -97,6 +99,13 @@ public class FFmpegService : Service, IFFmpegService
     }
 
     public async Task<byte[]> ReadAudioAsync(Stream input)
+    {
+        using MemoryStream memoryStream = new MemoryStream();
+        await StreamAudioAsync(input, memoryStream);
+        return memoryStream.GetBuffer();
+    }
+
+    public async Task<byte[]> ReadAudioAsync(StreamPipeSource input, Stream output)
     {
         using MemoryStream memoryStream = new MemoryStream();
         await StreamAudioAsync(input, memoryStream);

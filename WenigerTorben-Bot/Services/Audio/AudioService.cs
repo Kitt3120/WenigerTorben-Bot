@@ -41,6 +41,19 @@ public class AudioService : Service, IAudioService
 
     }
 
+    public IAudioSession GetAudioSession(IGuild guild)
+    {
+        lock (audioSessionsLock)
+        {
+            if (audioSessions.ContainsKey(guild))
+                return audioSessions[guild];
+
+            IAudioSession audioSession = new AudioSession(guild);
+            audioSessions[guild] = audioSession;
+            return audioSession;
+        }
+    }
+
     public int Enqueue(AudioRequest audioRequest, int? position = null) => GetAudioSession(audioRequest.Requestor.Guild).AudioRequestQueue.Enqueue(audioRequest, position);
 
     public bool Dequeue(AudioRequest audioRequest) => GetAudioSession(audioRequest.Requestor.Guild).AudioRequestQueue.Dequeue(audioRequest);
@@ -56,19 +69,6 @@ public class AudioService : Service, IAudioService
     public void Previous(IGuild guild) => GetAudioSession(guild).Previous();
 
     public void Skip(IGuild guild) => GetAudioSession(guild).Skip();
-
-    public IAudioSession GetAudioSession(IGuild guild)
-    {
-        lock (audioSessionsLock)
-        {
-            if (audioSessions.ContainsKey(guild))
-                return audioSessions[guild];
-
-            IAudioSession audioSession = new AudioSession(guild);
-            audioSessions[guild] = audioSession;
-            return audioSession;
-        }
-    }
 
     protected override ServiceConfiguration CreateServiceConfiguration() => new ServiceConfigurationBuilder().Build();
 }
