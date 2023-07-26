@@ -11,6 +11,9 @@ namespace WenigerTorbenBot.Audio.Player;
 
 public class AudioPlayer : IAudioPlayer
 {
+    //TODO: Maybe better handling of this?
+    private static readonly int dataToSecondsRatio = 48000 * 2 * 2;
+
     public IGuild Guild { get; init; }
     public IVoiceChannel? VoiceChannel { get; private set; }
     public AudioApplication AudioApplication { get; set; }
@@ -30,6 +33,8 @@ public class AudioPlayer : IAudioPlayer
         }
     }
     public Task? CurrentPlayTask { get; private set; }
+    public int? Position { get; private set; }
+    public int? Duration { get; private set; }
 
     public EventHandler<FinishedEventArgs>? OnFinish { get; set; }
 
@@ -78,6 +83,8 @@ public class AudioPlayer : IAudioPlayer
                     playCancelTokenSource.Dispose();
                     playCancelTokenSource = null;
                     CurrentPlayTask = null;
+                    Position = null;
+                    Duration = null;
                 }
             }, playCancelTokenSource.Token);
         }
@@ -96,36 +103,15 @@ public class AudioPlayer : IAudioPlayer
     private async Task PlayAudio(IAudioRequest audioRequest)
     {
         if (playCancelTokenSource is null)
-            throw new InvalidOperationException("PlayAudio() was called without a valid CancellationTokenSource");
+            throw new InvalidOperationException("PlayAudio was called without a valid CancellationTokenSource");
         else if (playCancelTokenSource.IsCancellationRequested)
-            throw new InvalidOperationException("PlayAudio() was called with a cancelled CancellationTokenSource");
+            throw new InvalidOperationException("PlayAudio was called with a cancelled CancellationTokenSource");
 
-        object bufferLock = new object();
         using MemoryStream memoryStream = new MemoryStream();
-        byte[] buffer = memoryStream.GetBuffer();
-
-        int position = 0;
-        int positionLimit = int.MaxValue;
-
         Task streamTask = Task.Run(async () =>
         {
             await audioRequest.AudioSource.StreamAsync(memoryStream);
-
-            /*
-            Detect empty remaining bytes in memoryStream buffer.
-            This happens because of the dynamic resizing of the underlying buffer of a MemoryStream.
-            If we would not force-end the output through positionLimit here, the bot would remain in audio channels and send 0-byte audio for a while after playing any media.
-            To make things simpler: We're "trimming" the remaining 0-bytes from the end of memoryStream. But we're not actually trimming the buffer array, we're just setting a limit for the playback.
-            */
-            lock (bufferLock)
-            {
-                buffer = memoryStream.GetBuffer();
-                int lastDataPosition = position;
-                for (int i = lastDataPosition; i < buffer.Length || playCancelTokenSource.IsCancellationRequested; i++)
-                    if (buffer[i] != 0)
-                        lastDataPosition = i;
-                positionLimit = lastDataPosition + 1; //Adding +1 offset so it behaves as a limit, same as buffer.Length, that should not be reached or exceeded 
-            }
+            Duration = Convert.ToInt32(memoryStream.Position) / dataToSecondsRatio;
         }, playCancelTokenSource.Token);
 
         IVoiceChannel targetChannel = audioRequest.VoiceChannel;
@@ -149,7 +135,9 @@ public class AudioPlayer : IAudioPlayer
         audioOutStream = audioClient.CreatePCMStream(AudioApplication, Bitrate, BufferMillis);
         VoiceChannel = targetChannel;
 
-        //Read from stream while it is still being writte to
+        //Read from stream while it is still being written to
+        Position = 0;
+        int readPosition = 0;
         do
         {
             pauseResetEvent.WaitOne();
@@ -157,7 +145,7 @@ public class AudioPlayer : IAudioPlayer
                 break;
 
             //Calculate bytes to read based on positionLimit, buffer and maxStepSize
-            int availableBytesAmount = Math.Min(positionLimit - position, buffer.Length - position);
+            int availableBytesAmount = Convert.ToInt32(memoryStream.Position) - readPosition;
             if (availableBytesAmount > StepSize)
                 availableBytesAmount = StepSize;
 
@@ -167,17 +155,12 @@ public class AudioPlayer : IAudioPlayer
             }
             else
             {
-                //No locking of bufferLock needed, as we're just reading. Worst case we're reading from the old buffer for this iteration, which would be no problem.
-                Memory<byte> data = buffer.AsMemory(position, availableBytesAmount);
+                Memory<byte> data = memoryStream.GetBuffer().AsMemory(readPosition, availableBytesAmount);
                 await audioOutStream.WriteAsync(data);
-                position += availableBytesAmount;
+                readPosition += availableBytesAmount;
+                Position = Convert.ToInt32(readPosition) / dataToSecondsRatio;
             }
-
-            if (!streamTask.IsCompleted) //If new input is still being streamed, update reference in case a new buffer has been allocated by the MemoryStream
-                lock (bufferLock)
-                    buffer = memoryStream.GetBuffer();
-
-        } while (!streamTask.IsCompleted || (position < buffer.Length && position < positionLimit));
+        } while (!streamTask.IsCompleted || readPosition < memoryStream.Position);
 
         //Sometimes, FlushAsync gets stuck, so we're using a timeout here
         using CancellationTokenSource cancellationTokenSource = new CancellationTokenSource();

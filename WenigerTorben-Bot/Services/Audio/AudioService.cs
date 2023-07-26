@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using Discord;
 using Serilog;
+using WenigerTorbenBot.Audio.Player;
 using WenigerTorbenBot.Audio.Queueing;
 using WenigerTorbenBot.Audio.Session;
 using WenigerTorbenBot.Services.Discord;
@@ -53,6 +54,8 @@ public class AudioService : Service, IAudioService
             return audioSession;
         }
     }
+
+    public IAudioPlayer GetAudioPlayer(IGuild guild) => GetAudioSession(guild).AudioPlayer;
 
     public int Enqueue(AudioRequest audioRequest, int? position = null) => GetAudioSession(audioRequest.Requestor.Guild).AudioRequestQueue.Enqueue(audioRequest, position);
 

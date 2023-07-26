@@ -17,6 +17,8 @@ public interface IAudioPlayer
     public int StepSize { get; }
     public bool Paused { get; set; }
     public Task? CurrentPlayTask { get; }
+    public int? Position { get; }
+    public int? Duration { get; }
 
     public EventHandler<FinishedEventArgs>? OnFinish { get; set; }
 

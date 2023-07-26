@@ -1,4 +1,5 @@
 using Discord;
+using WenigerTorbenBot.Audio.Player;
 using WenigerTorbenBot.Audio.Queueing;
 using WenigerTorbenBot.Audio.Session;
 using WenigerTorbenBot.Storage.Library;
@@ -8,6 +9,7 @@ namespace WenigerTorbenBot.Services.Audio;
 public interface IAudioService : IService
 {
     public IAudioSession GetAudioSession(IGuild guild);
+    public IAudioPlayer GetAudioPlayer(IGuild guild);
     public int Enqueue(AudioRequest audioRequest, int? position = null);
     public bool Dequeue(AudioRequest audioRequest);
     public bool Dequeue(IGuild guild, int position);

@@ -30,29 +30,10 @@ public class AudioSession : IAudioSession
         }
         set
         {
-            if (AudioRequestQueue.IsEmpty)
-            {
-                HasReachedEnd = true;
-                value = 0;
-            }
-            else
-            {
-                HasReachedEnd = false;
-
-                if (value < 0)
-                    value = 0;
-                else if (value >= AudioRequestQueue.Count)
-                    value = AudioRequestQueue.Count - 1;
-            }
-
-            int previousPosition = position;
-
-            lock (positionLock)
-                position = value;
-
-            OnPositionChange?.Invoke(this, new PositionChangeEventArgs(previousPosition, value));
+            SetPosition(value);
         }
     }
+
     public bool HasReachedEnd
     {
         get
@@ -218,6 +199,31 @@ public class AudioSession : IAudioSession
             HasReachedEnd = true;
         else
             Position++;
+    }
+
+    private void SetPosition(int value)
+    {
+        if (AudioRequestQueue.IsEmpty)
+        {
+            HasReachedEnd = true;
+            value = 0;
+        }
+        else
+        {
+            HasReachedEnd = false;
+
+            if (value < 0)
+                value = 0;
+            else if (value >= AudioRequestQueue.Count)
+                value = AudioRequestQueue.Count - 1;
+        }
+
+        int previousPosition = position;
+
+        lock (positionLock)
+            position = value;
+
+        OnPositionChange?.Invoke(this, new PositionChangeEventArgs(previousPosition, value));
     }
 
     private void HandleQueue()
