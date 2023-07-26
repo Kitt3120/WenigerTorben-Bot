@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using Discord;
 using Discord.Audio;
+using WenigerTorbenBot.Audio.Player;
 using WenigerTorbenBot.Audio.Queueing;
 
 namespace WenigerTorbenBot.Audio.Session;
@@ -9,15 +10,10 @@ namespace WenigerTorbenBot.Audio.Session;
 public interface IAudioSession
 {
     public IGuild Guild { get; }
-    public AudioApplication AudioApplication { get; set; }
-    public bool AutoBitrate { get; set; }
-    public int Bitrate { get; set; }
-    public int BufferMillis { get; set; }
-    public int StepSize { get; }
-    public bool Paused { get; }
-    public bool HasReachedEnd { get; }
+    public IAudioPlayer AudioPlayer { get; }
     public IAudioRequestQueue AudioRequestQueue { get; }
     public int Position { get; set; }
+    public bool HasReachedEnd { get; }
     public EventHandler<PositionChangeEventArgs>? OnPositionChange { get; set; }
 
     public void Pause();

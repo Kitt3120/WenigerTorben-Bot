@@ -10,6 +10,7 @@ using System.Threading.Tasks;
 using Discord;
 using Discord.Audio;
 using Serilog;
+using WenigerTorbenBot.Audio.Player;
 using WenigerTorbenBot.Audio.Queueing;
 
 namespace WenigerTorbenBot.Audio.Session;
@@ -18,25 +19,7 @@ namespace WenigerTorbenBot.Audio.Session;
 public class AudioSession : IAudioSession
 {
     public IGuild Guild { get; init; }
-    public AudioApplication AudioApplication { get; set; }
-    public bool AutoBitrate { get; set; }
-    public int Bitrate { get; set; }
-    public int BufferMillis { get; set; }
-    public int StepSize => Convert.ToInt32(((Bitrate / 8.0D) / (BufferMillis / 1000.0D)) / 2);
-    public bool Paused => !pauseResetEvent.WaitOne(0);
-    public bool HasReachedEnd
-    {
-        get
-        {
-            lock (reachedEndLock)
-                return reachedEnd;
-        }
-        private set
-        {
-            lock (reachedEndLock)
-                reachedEnd = value;
-        }
-    }
+    public IAudioPlayer AudioPlayer { get; init; }
     public IAudioRequestQueue AudioRequestQueue { get; init; }
     public int Position
     {
@@ -70,57 +53,56 @@ public class AudioSession : IAudioSession
             OnPositionChange?.Invoke(this, new PositionChangeEventArgs(previousPosition, value));
         }
     }
+    public bool HasReachedEnd
+    {
+        get
+        {
+            lock (reachedEndLock)
+                return reachedEnd;
+        }
+        private set
+        {
+            lock (reachedEndLock)
+                reachedEnd = value;
+        }
+    }
 
     public EventHandler<PositionChangeEventArgs>? OnPositionChange { get; set; }
 
-    private readonly ManualResetEvent pauseResetEvent;
     private readonly ManualResetEvent softPauseResetEvent;
-    private readonly object skipRequestLock;
-    private bool skipRequested;
-    private readonly object softSkipRequestLock;
-    private bool softSkipRequested;
     private readonly object reachedEndLock;
     private bool reachedEnd;
     private readonly object positionLock;
     private int position;
-    private IAudioRequest? previousRequest;
-    private IAudioClient? audioClient;
-    private AudioOutStream? audioStream;
-    private readonly object bufferLock;
+    private bool noPositionIncrement;
+    private readonly ManualResetEvent playingResetEvent;
     private readonly Thread queueThread;
 
     public AudioSession(IGuild guild, AudioApplication audioApplication = AudioApplication.Music, int? bitrate = null, int bufferMillis = 1000)
     {
         this.Guild = guild;
-
-        this.AudioApplication = audioApplication;
-        this.AutoBitrate = bitrate is null;
-        this.Bitrate = bitrate is null ? 0 : bitrate.Value;
-        this.BufferMillis = bufferMillis;
+        this.AudioPlayer = new AudioPlayer(guild, audioApplication, bitrate, bufferMillis);
         this.AudioRequestQueue = new AudioRequestQueue();
 
-        this.pauseResetEvent = new ManualResetEvent(true);
         this.softPauseResetEvent = new ManualResetEvent(true);
-        this.skipRequestLock = new object();
-        this.softSkipRequestLock = new object();
-        this.skipRequested = false;
-        this.softSkipRequested = false;
         this.reachedEndLock = new object();
         this.reachedEnd = true;
         this.positionLock = new object();
         this.position = 0;
-        this.bufferLock = new object();
+        this.noPositionIncrement = false;
+        this.playingResetEvent = new ManualResetEvent(false);
         this.queueThread = new Thread(HandleQueue);
 
         AudioRequestQueue.OnEnqueue += OnEnqueueRequest;
         AudioRequestQueue.OnDequeue += OnDequeueRequest;
         AudioRequestQueue.OnSwap += OnSwapRequests;
+        AudioPlayer.OnFinish += OnFinish;
 
 
         this.queueThread.Start();
     }
 
-    private void OnEnqueueRequest(object? sender, QueueEventArgs e)
+    private void OnEnqueueRequest(object? sender, EnqueueEventArgs enqueueEventArgs)
     {
         if (AudioRequestQueue.Count == 1)
         {
@@ -131,7 +113,7 @@ public class AudioSession : IAudioSession
         {
             bool hadReachedEnd = HasReachedEnd;
 
-            if (e.Position <= Position)
+            if (enqueueEventArgs.Position <= Position)
             {
                 Position++;
                 HasReachedEnd = hadReachedEnd;
@@ -144,64 +126,72 @@ public class AudioSession : IAudioSession
         }
     }
 
-    private void OnDequeueRequest(object? sender, QueueEventArgs e)
+    private void OnDequeueRequest(object? sender, DequeueEventArgs dequeueEventArgs)
     {
         if (AudioRequestQueue.Count == 0)
         {
             Position = 0;
             HasReachedEnd = true;
-            softPauseResetEvent.Reset();
-            lock (softSkipRequestLock)
-                softSkipRequested = true;
+            AudioPlayer.Cancel();
         }
         else
         {
-            bool hadReachedEnd = HasReachedEnd;
-
-            if (e.Position == Position)
+            if (dequeueEventArgs.Position == Position)
             {
-                if (e.Position == AudioRequestQueue.Count)
+                if (dequeueEventArgs.Position == AudioRequestQueue.Count)
                 {
                     Position--;
                     HasReachedEnd = true;
                 }
 
-                if (!hadReachedEnd)
-                    lock (softSkipRequestLock)
-                        softSkipRequested = true;
+                if (AudioPlayer.CurrentPlayTask is not null && !AudioPlayer.CurrentPlayTask.IsCompleted)
+                {
+                    noPositionIncrement = true;
+                    AudioPlayer.Cancel();
+                }
             }
-            else if (e.Position < Position)
+            else if (dequeueEventArgs.Position < Position)
             {
+                bool hadReachedEnd = HasReachedEnd;
                 Position--;
                 HasReachedEnd = hadReachedEnd;
             }
         }
     }
 
-    private void OnSwapRequests(object? sender, QueueSwapEventArgs e)
+    private void OnSwapRequests(object? sender, QueueSwapEventArgs queueSwapEventArgs)
     {
-        if (e.Position1 == Position)
-            Position = e.Position2;
-        else if (e.Position2 == Position)
-            Position = e.Position1;
+        if (queueSwapEventArgs.Position1 == Position)
+            Position = queueSwapEventArgs.Position2;
+        else if (queueSwapEventArgs.Position2 == Position)
+            Position = queueSwapEventArgs.Position1;
     }
 
-    public void Pause() => pauseResetEvent.Reset();
+    private void OnFinish(object? sender, FinishedEventArgs finishedEventArgs)
+    {
+        Next();
+        playingResetEvent.Set();
+    }
+
+    public void Pause()
+    {
+        AudioPlayer.Paused = true;
+    }
 
     public void Resume()
     {
         if (HasReachedEnd)
             Position = 0;
 
+        AudioPlayer.Paused = false;
         softPauseResetEvent.Set();
-        pauseResetEvent.Set();
     }
 
     public void Skip()
     {
-        if (!HasReachedEnd)
-            lock (skipRequestLock)
-                skipRequested = true;
+        AudioPlayer.Cancel();
+        AudioPlayer.Paused = false;
+        softPauseResetEvent.Set();
     }
 
     public void Previous()
@@ -209,39 +199,37 @@ public class AudioSession : IAudioSession
         if (Position > 0)
             Position--;
 
-        if (!HasReachedEnd)
-            lock (softSkipRequestLock)
-                softSkipRequested = true;
+        HasReachedEnd = false;
+        noPositionIncrement = true;
+        AudioPlayer.Cancel();
+        AudioPlayer.Paused = false;
+        softPauseResetEvent.Set();
     }
 
     private void Next()
     {
+        if (noPositionIncrement)
+        {
+            noPositionIncrement = false;
+            return;
+        }
+
         if (Position == AudioRequestQueue.Count - 1)
             HasReachedEnd = true;
         else
             Position++;
     }
 
-    private async void HandleQueue()
+    private void HandleQueue()
     {
         while (true)
         {
             softPauseResetEvent.WaitOne();
-            pauseResetEvent.WaitOne();
 
             if (AudioRequestQueue.IsEmpty || HasReachedEnd)
             {
                 softPauseResetEvent.Reset();
                 continue;
-            }
-
-            lock (skipRequestLock)
-            {
-                if (skipRequested)
-                {
-                    Next();
-                    continue;
-                }
             }
 
             IAudioRequest? audioRequest = AudioRequestQueue.GetAtPosition(Position);
@@ -252,121 +240,9 @@ public class AudioSession : IAudioSession
                 continue;
             }
 
-            using MemoryStream memoryStream = new MemoryStream();
-            byte[] buffer = memoryStream.GetBuffer();
-
-            int position = 0;
-            int positionLimit = int.MaxValue;
-
-            Task streamTask = Task.Run(async () =>
-            {
-                await audioRequest.AudioSource.StreamAsync(memoryStream);
-
-                /*
-                Detect empty remaining bytes in memoryStream buffer.
-                This happens because of the dynamic resizing of the underlying buffer of a MemoryStream.
-                If we would not force-end the output through positionLimit here, the bot would remain in audio channels and send 0-byte audio for a while after playing any media.
-                To make things simpler: We're "trimming" the remaining 0-bytes from the end of memoryStream. But we're not actually trimming the buffer array, we're just setting a limit for the playback.
-                */
-                lock (bufferLock)
-                {
-                    buffer = memoryStream.GetBuffer();
-                    int lastDataPosition = position;
-                    for (int i = lastDataPosition; i < buffer.Length; i++)
-                        if (buffer[i] != 0)
-                            lastDataPosition = i;
-                    positionLimit = lastDataPosition + 1; //Adding +1 offset so it behaves as a limit, same as buffer.Length, that should not be reached or exceeded 
-                }
-            });
-
-            IVoiceChannel targetChannel = audioRequest.VoiceChannel;
-            try
-            {
-                if (audioStream is not null)
-                    await audioStream.DisposeAsync();
-
-                if (targetChannel != previousRequest?.VoiceChannel && audioClient is not null)
-                {
-                    await audioClient.StopAsync();
-                    audioClient.Dispose();
-                    audioClient = null;
-                }
-
-                if (audioClient is null)
-                    audioClient = await targetChannel.ConnectAsync();
-
-                if (AutoBitrate)
-                    Bitrate = targetChannel.Bitrate;
-
-                audioStream = audioClient.CreatePCMStream(AudioApplication, Bitrate, BufferMillis);
-                previousRequest = audioRequest;
-
-
-                //Read from stream while it is still being writte to
-                do
-                {
-                    //Calculate bytes to read based on positionLimit, buffer and maxStepSize
-                    int availableBytesAmount = Math.Min(positionLimit - position, buffer.Length - position);
-                    if (availableBytesAmount > StepSize)
-                        availableBytesAmount = StepSize;
-
-                    if (!streamTask.IsCompleted && availableBytesAmount < StepSize)
-                    {
-                        await Task.Delay(BufferMillis); //Let streams buffer a bit in case audio output is faster than input
-                    }
-                    else
-                    {
-                        //No locking of bufferLock needed, as we're just reading. Worst case we're reading from the old buffer for this iteration, which would be no problem.
-                        Memory<byte> data = buffer.AsMemory(position, availableBytesAmount);
-                        await audioStream.WriteAsync(data);
-                        position += availableBytesAmount;
-                    }
-
-                    pauseResetEvent.WaitOne();
-                    lock (skipRequestLock)
-                    {
-                        lock (softSkipRequestLock)
-                            if (skipRequested || softSkipRequested)
-                            {
-                                skipRequested = false;
-                                break;
-                            }
-                    }
-
-                    if (!streamTask.IsCompleted) //If new input is still being streamed, update reference in case a new buffer has been allocated by memoryStream
-                        lock (bufferLock)
-                            buffer = memoryStream.GetBuffer();
-
-                } while (!streamTask.IsCompleted || (position < buffer.Length && position < positionLimit));
-
-                //Sometimes, FlushAsync gets stuck, so we're using a timeout here
-                using CancellationTokenSource cancellationTokenSource = new CancellationTokenSource();
-                Task flushTask = audioStream.FlushAsync(cancellationTokenSource.Token);
-                Task timeoutTask = Task.Delay(BufferMillis * 2, cancellationTokenSource.Token);
-                Task completedTask = await Task.WhenAny(flushTask, timeoutTask);
-                if (completedTask == timeoutTask)
-                {
-                    cancellationTokenSource.Cancel();
-                    Log.Warning("FlushAsync of AudioStream for request {audioRequest} in channel {channelName} ({channelId}) in guild {guildName} ({guildId}) timed out. Skipping FlushAsync call.", audioRequest.Request, audioRequest.VoiceChannel.Name, audioRequest.VoiceChannel.Id, Guild.Name, Guild.Id);
-                }
-
-                await streamTask; //Await so exception gets thrown if there was any while executing the task
-            }
-            catch (Exception e)
-            {
-                Log.Error(e, "Error while streaming audio of request {audioRequest} to channel {channelName} ({channelId}) in guild {guildName} ({guildId}). Skipping entry.", audioRequest.Request, audioRequest.VoiceChannel.Name, audioRequest.VoiceChannel.Id, Guild.Name, Guild.Id);
-                await audioRequest.OriginChannel.SendMessageAsync($"Sorry {audioRequest.Requestor.Mention}, there was an error while playing your requested audio: {e.Message}\nYour request will be skipped. Sorry about that!");
-            }
-            finally
-            {
-                lock (softSkipRequestLock)
-                {
-                    if (!softSkipRequested)
-                        Next();
-                    else
-                        softSkipRequested = false;
-                }
-            }
+            playingResetEvent.Reset();
+            AudioPlayer.Play(audioRequest);
+            playingResetEvent.WaitOne();
         }
     }
 

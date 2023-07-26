@@ -121,8 +121,6 @@ public class AudioModule : ModuleBase<SocketCommandContext>
         IAudioSession audioSession = audioService.GetAudioSession(Context.Guild);
         if (audioSession.AudioRequestQueue.Count == 0)
             await ReplyAsync($"{Context.User.Mention}, nothing is playing");
-        else if (audioSession.Position == 0)
-            await ReplyAsync($"{Context.User.Mention}, you are already at the beginning of the queue");
         else
         {
             audioSession.Previous();
